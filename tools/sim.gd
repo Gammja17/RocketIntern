@@ -25,6 +25,8 @@ func _initialize() -> void:
 	var m = load("res://scenes/main.tscn").instantiate()
 	root.add_child(m)
 	await process_frame
+	m.settings.lang = "ko"   # 대사 비교는 한국어 기준
+	m._apply_settings(false)
 	var guard := 0
 	var last_day := -1
 	Engine.time_scale = 50.0

@@ -110,33 +110,38 @@ theme_override_styles/panel = SubResource("topbar")
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/h_separation = 14
+theme_override_constants/h_separation = 10
 theme_override_constants/v_separation = 0
 
 [node name="DayLabel" type="Label" parent="TopBarBg/TopBar"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.82, 0.35, 1)
+theme_override_font_sizes/font_size = 18
 
 [node name="MoneyLabel" type="Label" parent="TopBarBg/TopBar"]
 unique_name_in_owner = true
 layout_mode = 2
+theme_override_font_sizes/font_size = 18
 
 [node name="QuotaLabel" type="Label" parent="TopBarBg/TopBar"]
 unique_name_in_owner = true
 layout_mode = 2
+theme_override_font_sizes/font_size = 18
 
 [node name="RentLabel" type="Label" parent="TopBarBg/TopBar"]
 unique_name_in_owner = true
 layout_mode = 2
+theme_override_font_sizes/font_size = 18
 
 [node name="SuspText" type="Label" parent="TopBarBg/TopBar"]
 layout_mode = 2
 text = "의심도"
+theme_override_font_sizes/font_size = 18
 
 [node name="SuspBar" type="ProgressBar" parent="TopBarBg/TopBar"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(90, 18)
+custom_minimum_size = Vector2(72, 18)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
@@ -147,16 +152,24 @@ show_percentage = false
 [node name="HeatText" type="Label" parent="TopBarBg/TopBar"]
 layout_mode = 2
 text = "수사망"
+theme_override_font_sizes/font_size = 18
 
 [node name="HeatBar" type="ProgressBar" parent="TopBarBg/TopBar"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(90, 18)
+custom_minimum_size = Vector2(72, 18)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 theme_override_styles/background = SubResource("susp_bg")
 theme_override_styles/fill = SubResource("heat_fill")
 show_percentage = false
+
+[node name="SettingsBtn" type="Button" parent="TopBarBg/TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+theme_override_font_sizes/font_size = 18
+text = "설정"
 
 [node name="RuleLabel" type="Label" parent="."]
 unique_name_in_owner = true
@@ -472,6 +485,119 @@ autowrap_mode = 3
 [node name="AchClose" type="Button" parent="AchPanel/VBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "닫기"
+
+[node name="SettingsLayer" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dim" type="ColorRect" parent="SettingsLayer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="SettingsPanel" type="PanelContainer" parent="SettingsLayer"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 200.0
+offset_top = 80.0
+offset_right = 760.0
+offset_bottom = 400.0
+theme_override_styles/panel = SubResource("panel")
+
+[node name="VBox" type="VBoxContainer" parent="SettingsLayer/SettingsPanel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="SettingsLayer/SettingsPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.82, 0.35, 1)
+text = "설정"
+
+[node name="Grid" type="GridContainer" parent="SettingsLayer/SettingsPanel/VBox"]
+layout_mode = 2
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 12
+columns = 2
+
+[node name="LangText" type="Label" parent="SettingsLayer/SettingsPanel/VBox/Grid"]
+layout_mode = 2
+text = "언어"
+
+[node name="LangOpt" type="OptionButton" parent="SettingsLayer/SettingsPanel/VBox/Grid"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="MusicText" type="Label" parent="SettingsLayer/SettingsPanel/VBox/Grid"]
+layout_mode = 2
+text = "음악"
+
+[node name="MusicSlider" type="HSlider" parent="SettingsLayer/SettingsPanel/VBox/Grid"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.05
+value = 0.8
+
+[node name="SfxText" type="Label" parent="SettingsLayer/SettingsPanel/VBox/Grid"]
+layout_mode = 2
+text = "효과음"
+
+[node name="SfxSlider" type="HSlider" parent="SettingsLayer/SettingsPanel/VBox/Grid"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.05
+value = 0.8
+
+[node name="SpeedText" type="Label" parent="SettingsLayer/SettingsPanel/VBox/Grid"]
+layout_mode = 2
+text = "글자 속도"
+
+[node name="SpeedOpt" type="OptionButton" parent="SettingsLayer/SettingsPanel/VBox/Grid"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="FullText" type="Label" parent="SettingsLayer/SettingsPanel/VBox/Grid"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "전체 화면"
+
+[node name="FullCheck" type="CheckButton" parent="SettingsLayer/SettingsPanel/VBox/Grid"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="SaveNote" type="Label" parent="SettingsLayer/SettingsPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 18
+text = "게임은 매일 아침 자동으로 저장돼요. 하루 도중에 끄면 그날 아침부터 다시 시작해요."
+autowrap_mode = 3
+
+[node name="SettingsClose" type="Button" parent="SettingsLayer/SettingsPanel/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 text = "닫기"
 

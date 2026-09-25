@@ -28,6 +28,8 @@ func _initialize() -> void:
 		var m = load("res://scenes/main.tscn").instantiate()
 		root.add_child(m)
 		await process_frame
+		m.settings.lang = "ko"
+		m._apply_settings(false)
 		var guard := 0
 		var last_day := -1
 		while m.waiting != "end" and guard < 30000:

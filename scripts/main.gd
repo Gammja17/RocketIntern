@@ -41,9 +41,11 @@ const HEAT_SEARCH := 65     # 가택 수색
 const HEAT_ARREST := 100    # 체포
 const FIRE_AT := 100
 const LAST_WARNING_FINE := 5000
-const TYPE_SPEED := 0.025   # 글자 하나당 초
+const SETTINGS_PATH := "user://settings.json"
+const TYPE_SPEEDS := [0.045, 0.025, 0.012, 0.0]   # 글자 하나당 초: 느리게 · 보통 · 빠르게 · 바로
+const LANGS := ["ko", "en"]
 const CHOICE_Y := [230.0, 430.0]      # 선택지 위치 [가로, 세로]. 무대에 포켓몬이 서 있으면 그 아래로 내린다
-const CHOICE_Y_LOW := [350.0, 560.0]
+const CHOICE_Y_LOW := [318.0, 560.0]
 ## 폰을 세로로 들면 540x960 화면에 이 배치를 쓴다. 가로 배치는 씬에 있는 그대로.
 const PORTRAIT := {
 	"TopBarBg": Rect2(0, 0, 540, 0),
@@ -57,6 +59,7 @@ const PORTRAIT := {
 	"RestartBtn": Rect2(170, 760, 200, 56),
 	"ToastPanel": Rect2(150, 90, 382, 70),
 	"AchPanel": Rect2(12, 60, 516, 880),
+	"SettingsLayer/SettingsPanel": Rect2(20, 220, 500, 380),
 }
 
 const TRIO_TEX := preload("res://assets/trainers/teamrocket.png")
@@ -129,6 +132,8 @@ var toast_tween: Tween
 var quota_delta := 0   # 오늘 사건으로 바뀐 할당량
 var day_flags := {}    # 오늘만 켜지는 표시 (정전 등)
 var landscape := {}   # 씬에 있는 가로 배치
+var settings := {"lang": "", "music": 0.8, "sfx": 0.8, "speed": 1, "fullscreen": false}
+var before_settings := ""   # 설정 창을 열기 전의 waiting
 var is_portrait := false
 
 
@@ -147,6 +152,7 @@ func _ready() -> void:
 		landscape[n] = Rect2(c.position, c.size)
 	get_window().size_changed.connect(_apply_layout)
 	_apply_layout()
+	_setup_settings()
 	if FileAccess.file_exists(ACH_PATH):
 		var af := FileAccess.open(ACH_PATH, FileAccess.READ)
 		var parsed = JSON.parse_string(af.get_as_text()) if af else null
@@ -211,8 +217,9 @@ func _title_menu() -> void:
 	var opts := [{"text": "처음부터", "call": "_new_game"}]
 	if FileAccess.file_exists(SAVE_PATH):
 		opts.push_front({"text": "이어하기", "call": "_load_game"})
-	opts.append({"text": "도전 과제 (%d / %d)" % [achieved.size(), Ach.LIST.size()], "call": "_show_achievements"})
-	opts.append({"text": "기록실 (%d / %d)" % [records.endings.size() + records.fates.size(), _record_total()], "call": "_show_records"})
+	opts.append({"text": "설정", "call": "_open_settings"})
+	opts.append({"text": tr("도전 과제 (%d / %d)") % [achieved.size(), Ach.LIST.size()], "call": "_show_achievements"})
+	opts.append({"text": tr("기록실 (%d / %d)") % [records.endings.size() + records.fates.size(), _record_total()], "call": "_show_records"})
 	_show_choice(opts)
 
 
@@ -223,10 +230,10 @@ func _show_achievements() -> Array:
 	for a in Ach.LIST:
 		if achieved.has(a.id):
 			var code := "" if OS.has_feature("web") else "   [%s]" % a.code
-			lines.append("[달성] %s%s\n    %s" % [a.name, code, a.desc])
+			lines.append(tr("[달성] %s%s\n    %s") % [tr(a.name), code, tr(a.desc)])
 		else:
-			lines.append("[ ] ???\n    %s" % ("어떤 결말에 이른다." if a.has("end") else a.desc))
-	%AchTitle.text = "도전 과제"
+			lines.append("[ ] ???\n    %s" % (tr("어떤 결말에 이른다.") if a.has("end") else tr(a.desc)))
+	%AchTitle.text = tr("도전 과제")
 	ach_label.text = "\n".join(PackedStringArray(lines))
 	ach_panel.show()
 	return []
@@ -243,17 +250,17 @@ func _record_total() -> int:
 func _show_records() -> Array:
 	_hide_all()
 	waiting = "menu"
-	var lines := ["끝까지 간 판: %d번" % int(records.runs), "", "[결말]"]
+	var lines := [tr("끝까지 간 판: %d번") % int(records.runs), "", tr("[결말]")]
 	for id in Extra.ENDING_NAMES:
-		lines.append(("  %s" % Extra.ENDING_NAMES[id]) if records.endings.has(id) else "  ???")
+		lines.append(("  %s" % tr(Extra.ENDING_NAMES[id])) if records.endings.has(id) else "  ???")
 	for who in Extra.FATE_NAMES:
 		lines.append("")
 		var names: Dictionary = Extra.FATE_NAMES[who]
 		var seen := names.keys().filter(func(k): return records.fates.has(who + ":" + k)).size()
-		lines.append("[%s의 운명 %d / %d]" % [Extra.FATE_WHO[who], seen, names.size()])
+		lines.append(tr("[%s의 운명 %d / %d]") % [tr(Extra.FATE_WHO[who]), seen, names.size()])
 		for k in names:
-			lines.append(("  %s" % names[k]) if records.fates.has(who + ":" + k) else "  ???")
-	%AchTitle.text = "기록실"
+			lines.append(("  %s" % tr(names[k])) if records.fates.has(who + ":" + k) else "  ???")
+	%AchTitle.text = tr("기록실")
 	ach_label.text = "\n".join(PackedStringArray(lines))
 	ach_panel.show()
 	return []
@@ -278,9 +285,9 @@ func _unlock(id: String) -> void:
 		af.store_string(JSON.stringify(achieved))
 	var a: Dictionary = Ach.LIST.filter(func(x): return x.id == id)[0]
 	if OS.has_feature("web"):
-		toast_label.text = "도전 과제 달성\n%s" % a.name
+		toast_label.text = tr("도전 과제 달성\n%s") % tr(a.name)
 	else:
-		toast_label.text = "도전 과제 달성: %s\n등록 코드 %s" % [a.name, a.code]
+		toast_label.text = tr("도전 과제 달성: %s\n등록 코드 %s") % [tr(a.name), a.code]
 	toast_panel.show()
 	toast_panel.modulate.a = 0.0
 	if toast_tween:
@@ -423,7 +430,7 @@ func _advance() -> void:
 				st.ending = s.id
 			"battle":
 				_battle_start(s)
-				var intro := _say("%s 앞으로 나섰다. 상대는 %s." % [_josa(battle.me.name, "이", "가"), battle.foe.name]).merged({"pokemon": int(battle.me.id)})
+				var intro := _say(tr("%s 앞으로 나섰다. 상대는 %s.") % [_josa(battle.me.name, "이", "가"), battle.foe.name]).merged({"pokemon": int(battle.me.id)})
 				queue = [intro] + _battle_menu() + queue
 			"battle_next":
 				queue = _battle_next() + queue
@@ -514,7 +521,7 @@ func _show_say(who: String, text: String, shake := false, pokemon := 0) -> void:
 	text_label.text = text
 	text_label.visible_ratio = 0.0
 	typing = create_tween()
-	typing.tween_property(text_label, "visible_ratio", 1.0, text.length() * TYPE_SPEED)
+	typing.tween_property(text_label, "visible_ratio", 1.0, maxf(0.01, text.length() * TYPE_SPEEDS[int(settings.speed)]))
 	if shake:
 		_shake(dialog_panel)
 		_shake(stage)
@@ -665,7 +672,7 @@ func _add_susp(n: int) -> void:
 	st.money -= LAST_WARNING_FINE
 	var warn := [
 		{"t": "say", "who": "apollo", "urgent": true, "shake": true, "text": "신입. 뒷문 밖 풀밭에 네 발자국이 너무 많다. 모를 줄 알았나?"},
-		_say("벌금 %s원이다. 이건 마지막 경고다. 한 번만 더 걸리면 그땐 끝이다." % _won(LAST_WARNING_FINE), "apollo"),
+		_say(tr("벌금 %s원이다. 이건 마지막 경고다. 한 번만 더 걸리면 그땐 끝이다.") % _won(LAST_WARNING_FINE), "apollo"),
 	]
 	if waiting == "work" or waiting == "anim":
 		warn.append({"t": "work_next"})
@@ -687,8 +694,8 @@ func _show_crate() -> void:
 	docs_panel.show()
 	rule_label.text = info.get("rule", "")
 	rule_label.show()
-	docs_label.text = "\n\n".join(PackedStringArray(_docs()))
-	crate_label.text = "상자 %d / %d" % [crate_i + 1, crates.size()]
+	docs_label.text = "\n\n".join(PackedStringArray(_docs().map(func(d): return tr(d))))
+	crate_label.text = tr("상자 %d / %d") % [crate_i + 1, crates.size()]
 	_set_pokemon(crate_sprite, c.id)
 	_play_cry(c.id)
 	crate_sprite.modulate.a = 1.0
@@ -697,11 +704,11 @@ func _show_crate() -> void:
 	crate_sprite.scale = Vector2(0.2, 0.2)
 	create_tween().tween_property(crate_sprite, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	name_label.text = c.name
-	memo_label.text = "수거 메모: " + c.memo
+	memo_label.text = tr("수거 메모: ") + tr(c.memo)
 	item_label.text = c.get("item", "")
 	item_label.visible = item_label.text != ""
 	return_btn.visible = c.has("owner") and _week() >= 2
-	return_btn.text = "주인에게 돌려보내기 (-%s원)" % _won(POSTAGE)
+	return_btn.text = tr("주인에게 돌려보내기 (-%s원)") % _won(POSTAGE)
 	special_btn.visible = c.has("special") and (not c.special.has("if") or _check(c.special["if"]))
 	if special_btn.visible:
 		special_btn.text = c.special.label
@@ -882,27 +889,27 @@ func _report_steps() -> Array:
 	var n := sent_today.size()
 	var quota: int = maxi(1, info.quota + quota_delta)
 	var pay := BASE_PAY + n * PER_SEND
-	var out := [_say("오늘 본사로 보낸 포켓몬은 %d마리다. 할당량은 %d마리였다." % [n, quota])]
+	var out := [_say(tr("오늘 본사로 보낸 포켓몬은 %d마리다. 할당량은 %d마리였다.") % [n, quota])]
 	if n >= quota:
 		pay += QUOTA_BONUS
-		out.append(_say("할당량을 채워서 달성 수당 %s원이 붙었다." % _won(QUOTA_BONUS)))
+		out.append(_say(tr("할당량을 채워서 달성 수당 %s원이 붙었다.") % _won(QUOTA_BONUS)))
 	else:
 		out.append(_say("할당량을 채우지 못해서 달성 수당은 없다."))
 	if bonus_today > 0:
 		pay += bonus_today
-		out.append(_say("연구소 포켓몬 특별 수당으로 %s원을 더 받았다." % _won(bonus_today)))
+		out.append(_say(tr("연구소 포켓몬 특별 수당으로 %s원을 더 받았다.") % _won(bonus_today)))
 	if not rejected_today.is_empty():
-		var names := rejected_today.map(func(c): return c.get("reveal", c.name))
+		var names := rejected_today.map(func(c): return tr(c.get("reveal", c.name)))
 		pay -= REJECT_FINE * rejected_today.size()
-		out.append(_say("반품된 포켓몬: %s. 한 마리당 %s원씩 깎였다." % [", ".join(PackedStringArray(names)), _won(REJECT_FINE)]))
+		out.append(_say(tr("반품된 포켓몬: %s. 한 마리당 %s원씩 깎였다.") % [", ".join(PackedStringArray(names)), _won(REJECT_FINE)]))
 	var missed := crates.filter(func(c): return c.get("wanted", false) and not st.sent.has(c.key) and not (st.spc.has(c.key) and c.special.get("no_fine", false)))
 	if not missed.is_empty():
 		pay -= WANTED_FINE * missed.size()
-		var names := missed.map(func(c): return c.name)
-		out.append(_say("수배 목록에 있던 %s 칸이 비어서 본사에 보고됐다. 벌금 %s원." % [", ".join(PackedStringArray(names)), _won(WANTED_FINE * missed.size())]))
+		var names := missed.map(func(c): return tr(c.name))
+		out.append(_say(tr("수배 목록에 있던 %s 칸이 비어서 본사에 보고됐다. 벌금 %s원.") % [", ".join(PackedStringArray(names)), _won(WANTED_FINE * missed.size())]))
 		out.append({"t": "fx", "watch": 1})
 	out.append({"t": "fx", "money": pay})
-	out.append(_say("오늘 일당은 %s원이다." % _won(pay)))
+	out.append(_say(tr("오늘 일당은 %s원이다.") % _won(pay)))
 	return out
 
 
@@ -913,10 +920,10 @@ func _evening_steps() -> Array:
 	_refresh_bar()
 	var home := "warehouse" if st.flags.get("live_warehouse", false) else "room"
 	var out := [{"t": "bg", "name": home}, {"t": "bgm", "name": "pallet"},
-		_say("저녁값과 교통비로 %s원이 나갔다. 남은 돈은 %s원이다." % [_won(LIVING), _won(st.money)])]
+		_say(tr("저녁값과 교통비로 %s원이 나갔다. 남은 돈은 %s원이다.") % [_won(LIVING), _won(st.money)])]
 	for c in released_today:
 		if c.get("named", false) and not c.get("reject", false) and st.rel.has(c.key):
-			out.append(_say("집에 오는 길, 가로등 아래에 %s 닮은 그림자가 잠깐 서 있다가 사라졌다." % _josa(c.name, "과", "와")))
+			out.append(_say(tr("집에 오는 길, 가로등 아래에 %s 닮은 그림자가 잠깐 서 있다가 사라졌다.") % _josa(tr(c.name), "과", "와")))
 			break
 	if home == "room":
 		var owned := Extra.ITEMS.filter(func(it): return st.items.has(it.key) and it.line != "")
@@ -924,34 +931,34 @@ func _evening_steps() -> Array:
 			out.append(_say(owned[int(st.day) % owned.size()].line))
 		var next := int(st.day) + 1
 		for k in st.home:
-			out.append(_say(Extra.HOME_LINES.get(k, "%s 방구석에서 자고 있다." % _josa(st.home[k].name, "이", "가"))).merged({"pokemon": int(st.home[k].id)}))
+			out.append(_say(Extra.HOME_LINES.get(k, tr("%s 방구석에서 자고 있다.") % _josa(tr(st.home[k].name), "이", "가"))).merged({"pokemon": int(st.home[k].id)}))
 			break
 		if st.items.has("radio") and next < days.size() and days[next].has("rule"):
-			out.append(_say("라디오 주파수를 돌리다 로켓단 무전이 잡혔다. '내일 지침: %s'" % days[next].rule))
+			out.append(_say(tr("라디오 주파수를 돌리다 로켓단 무전이 잡혔다. '내일 지침: %s'") % tr(days[next].rule)))
 		if days[int(st.day)].name.ends_with("목요일") and _week() < 4:
-			out.append(_say("내일이 월세 갚는 날이다. 갚아야 할 돈은 %s원이다." % _won(_rent())))
+			out.append(_say(tr("내일이 월세 갚는 날이다. 갚아야 할 돈은 %s원이다.") % _won(_rent())))
 	return out
 
 
 func _meadow_steps() -> Array:
 	if st.meadow.is_empty():
 		return []
-	var names := PackedStringArray(st.meadow.values().map(func(m): return m.name))
+	var names := PackedStringArray(st.meadow.values().map(func(m): return tr(m.name)))
 	var out := [{"t": "bg", "name": "meadow"},
-		_say("밤늦게 뒷문 풀밭에 들렀다. %s 아직 남아 있다." % _josa(", ".join(names), "이", "가")).merged({"pokemon": int(st.meadow.values()[0].id)})]
+		_say(tr("밤늦게 뒷문 풀밭에 들렀다. %s 아직 남아 있다.") % _josa(", ".join(names), "이", "가")).merged({"pokemon": int(st.meadow.values()[0].id)})]
 	if st.meadow.size() >= 2:
 		out.append(_say("풀밭에 머무는 녀석이 늘수록 누군가 눈치챌 위험도 커진다."))
-	var opts := [{"text": "먹이를 두고 온다 (-%s원 · 모두 친밀도 +1)" % _won(FEED_COST), "call": "_feed_meadow"}]
+	var opts := [{"text": tr("먹이를 두고 온다 (-%s원 · 모두 친밀도 +1)") % _won(FEED_COST), "call": "_feed_meadow"}]
 	for k in st.meadow:
 		var m: Dictionary = st.meadow[k]
 		if opts.size() >= 4:
 			break
 		if m.bond >= BOND_STAY and st.home.size() < HOME_MAX:
-			opts.append({"text": "%s 원룸에 데려간다" % _josa(m.name, "을", "를"), "call": "_adopt", "mkey": k})
+			opts.append({"text": tr("%s 원룸에 데려간다") % _josa(tr(m.name), "을", "를"), "call": "_adopt", "mkey": k})
 		else:
-			opts.append({"text": "%s 놀아 준다 (친밀도 %d → %d)" % [_josa(m.name, "과", "와"), m.bond, m.bond + 2], "call": "_play_meadow", "mkey": k})
+			opts.append({"text": tr("%s 놀아 준다 (친밀도 %d → %d)") % [_josa(tr(m.name), "과", "와"), m.bond, m.bond + 2], "call": "_play_meadow", "mkey": k})
 	if not st.flags.get("den", false):
-		opts.append({"text": "은신처를 만들어 준다 (-%s원 · 들킬 위험 절반)" % _won(DEN_COST), "call": "_build_den"})
+		opts.append({"text": tr("은신처를 만들어 준다 (-%s원 · 들킬 위험 절반)") % _won(DEN_COST), "call": "_build_den"})
 	opts.append({"text": "그냥 돌아간다"})
 	out.append({"t": "choice", "options": opts})
 	out.append({"t": "meadow_tick"})
@@ -973,10 +980,10 @@ func _play_meadow() -> Array:
 	m.bond += 2
 	st.help[k] = true
 	_add_susp(PLAY_SUSP)
-	var line: String = Extra.MEADOW_PLAY.get(k, "%s 한참 뛰어놀았다. 돌아갈 때 녀석이 뒷문까지 따라 나왔다." % _josa(m.name, "과", "와"))
+	var line: String = Extra.MEADOW_PLAY.get(k, tr("%s 한참 뛰어놀았다. 돌아갈 때 녀석이 뒷문까지 따라 나왔다.") % _josa(tr(m.name), "과", "와"))
 	var out := [_say(line).merged({"pokemon": int(m.id)})]
 	if m.bond >= BOND_STAY:
-		out.append(_say("%s 이제 풀밭을 떠나지 않을 것 같다. 원룸에 데려갈 수도 있다." % _josa(m.name, "은", "는")))
+		out.append(_say(tr("%s 이제 풀밭을 떠나지 않을 것 같다. 원룸에 데려갈 수도 있다.") % _josa(tr(m.name), "은", "는")))
 	return out
 
 
@@ -994,7 +1001,7 @@ func _adopt() -> Array:
 	st.meadow.erase(k)
 	st.help[k] = true
 	var where := "창고 다락" if st.flags.get("live_warehouse", false) else "원룸"
-	var out := [_say("%s 품에 안고 %s으로 돌아왔다. 녀석은 금방 구석 자리를 차지했다." % [_josa(m.name, "을", "를"), where]).merged({"pokemon": int(m.id)})]
+	var out := [_say(tr("%s 품에 안고 %s으로 돌아왔다. 녀석은 금방 구석 자리를 차지했다.") % [_josa(tr(m.name), "을", "를"), tr(where)]).merged({"pokemon": int(m.id)})]
 	if Extra.ADOPT.has(k):
 		out.append(_say(Extra.ADOPT[k]))
 	if k == "meowth_stray":
@@ -1013,7 +1020,7 @@ func _meadow_tick() -> Array:
 			continue   # 친해진 녀석은 떠나지 않고 기다린다
 		st.meadow[k].days -= 1
 		if st.meadow[k].days <= 0:
-			out.append(_say(Extra.MEADOW_LEAVE.get(k, "%s 풀밭을 떠났다." % _josa(st.meadow[k].name, "이", "가"))))
+			out.append(_say(Extra.MEADOW_LEAVE.get(k, tr("%s 풀밭을 떠났다.") % _josa(tr(st.meadow[k].name), "이", "가"))))
 			st.meadow.erase(k)
 	return out
 
@@ -1080,8 +1087,8 @@ func _search_steps() -> Array:
 		out.append(_say("메타몽은 다른 녀석들 위로 담요처럼 펼쳐져 인형 무더기인 척했다. 경찰은 빈손으로 돌아갔다."))
 		out.append({"t": "fx", "heat": -10})
 		return out
-	var names := PackedStringArray(st.home.values().map(func(m): return m.name))
-	out.append(_say("경찰은 방구석의 %s 금방 찾아냈다. 도난 신고 목록과 대조하는 데 오 분도 걸리지 않았다." % _josa(", ".join(names), "을", "를")))
+	var names := PackedStringArray(st.home.values().map(func(m): return tr(m.name)))
+	out.append(_say(tr("경찰은 방구석의 %s 금방 찾아냈다. 도난 신고 목록과 대조하는 데 오 분도 걸리지 않았다.") % _josa(", ".join(names), "을", "를")))
 	out.append(_say("녀석들은 보호소로 옮겨졌다. 문을 나서면서 한 번씩 나를 돌아봤다."))
 	for k in st.home:
 		st.flags["seized_" + k] = true
@@ -1093,7 +1100,7 @@ func _search_steps() -> Array:
 func _cuffed_steps(where: String) -> Array:
 	return [
 		{"t": "title", "text": "수갑", "urgent": true},
-		_say("%s. 경찰이 내 이름을 불렀다. 검수 기록 맨 아래 서명란에 적힌 그 이름이었다." % where),
+		_say(tr("%s. 경찰이 내 이름을 불렀다. 검수 기록 맨 아래 서명란에 적힌 그 이름이었다.") % where),
 		_say("본사로 보낸 포켓몬의 주인들이 차례로 증언했다. 이름표, 편지, 리본. 나는 그걸 다 읽고도 트럭에 실었다."),
 		{"t": "ending", "id": "cuffed"},
 		{"t": "epilogue"},
@@ -1175,9 +1182,9 @@ func _fate_steps() -> Array:
 func _home_epilogue() -> Array:
 	var out := []
 	for k in st.home:
-		var line: String = Extra.HOME_EPILOGUE.get(k, "%s 끝까지 내 곁에 있었다." % _josa(st.home[k].name, "은", "는"))
+		var line: String = Extra.HOME_EPILOGUE.get(k, tr("%s 끝까지 내 곁에 있었다.") % _josa(tr(st.home[k].name), "은", "는"))
 		if st.get("ending", "") == "cuffed":
-			line = "원룸에 있던 %s 보호소로 옮겨졌다. 면회 날마다 창살 너머로 나를 찾았다고 한다." % _josa(st.home[k].name, "은", "는")
+			line = tr("원룸에 있던 %s 보호소로 옮겨졌다. 면회 날마다 창살 너머로 나를 찾았다고 한다.") % _josa(tr(st.home[k].name), "은", "는")
 		out.append(_say(line).merged({"pokemon": int(st.home[k].id)}))
 	return out
 
@@ -1186,18 +1193,18 @@ func _rent_steps() -> Array:
 	if st.flags.get("live_warehouse", false):
 		st.money -= WAREHOUSE_FEE
 		_refresh_bar()
-		return [_say("창고 다락 자릿세 %s원을 아폴로에게 냈다. 로켓단은 잠자리에도 돈을 받는다." % _won(WAREHOUSE_FEE))]
+		return [_say(tr("창고 다락 자릿세 %s원을 아폴로에게 냈다. 로켓단은 잠자리에도 돈을 받는다.") % _won(WAREHOUSE_FEE))]
 	if st.money >= _rent():
 		st.money -= _rent()
 		_refresh_bar()
-		return [_say("밀린 월세 %s원을 갚았다. 통장에는 %s원이 남았다." % [_won(_rent()), _won(st.money)])]
+		return [_say(tr("밀린 월세 %s원을 갚았다. 통장에는 %s원이 남았다.") % [_won(_rent()), _won(st.money)])]
 	var loyal: bool = not st.flags.get("reported_roy", false) and not st.flags.get("rosa_knows", false)
 	if loyal and st.money >= _rent() - SENIOR_HELP:
 		var gap: int = _rent() - st.money
 		st.money = 0
 		_refresh_bar()
 		return [
-			_say("월세가 %s원 모자랐다." % _won(gap)),
+			_say(tr("월세가 %s원 모자랐다.") % _won(gap)),
 			_say("모자라는 건 우리가 낼게. 대신 다음 달엔 꼭 갚아.", "rosa"),
 			_say("월세를 갚았다. 통장에는 한 푼도 남지 않았다."),
 		]
@@ -1249,7 +1256,7 @@ func _visit_place() -> Array:
 func _slot_menu() -> Array:
 	var opts := [{"text": "그만하고 경품 교환소로 간다"}]
 	if st.money >= SLOT_BET:
-		opts.push_front({"text": "레버를 당긴다 (-%s원)" % _won(SLOT_BET), "call": "_slot_pull"})
+		opts.push_front({"text": tr("레버를 당긴다 (-%s원)") % _won(SLOT_BET), "call": "_slot_pull"})
 	return [{"t": "choice", "options": opts}]
 
 
@@ -1276,7 +1283,7 @@ func _slot_pull() -> Array:
 		_play_sfx("lose")
 	st.money += win
 	_refresh_bar()
-	return [_say("%s (지금 가진 돈 %s원)" % [line, _won(st.money)]), {"t": "slots"}]
+	return [_say(tr("%s (지금 가진 돈 %s원)") % [tr(line), _won(st.money)]), {"t": "slots"}]
 
 
 func _prize_menu() -> Array:
@@ -1330,7 +1337,7 @@ func _buy_item() -> Array:
 			if st.items.size() == Extra.ITEMS.size():
 				_unlock("my_room")
 			_refresh_bar()
-			return [_say("%s 샀다. 원룸에 가져다 두었다." % _josa(it.text.split(" (")[0], "을", "를"))]
+			return [_say(tr("%s 샀다. 원룸에 가져다 두었다.") % _josa(tr(it.text).split(" (")[0], "을", "를"))]
 	return []
 
 
@@ -1372,11 +1379,11 @@ func _refresh_bar() -> void:
 		return
 	var info: Dictionary = days[int(st.day)]
 	day_label.text = info.name
-	money_label.text = "돈 %s원" % _won(st.money)
-	quota_label.text = "보냄 %d / %d" % [sent_today.size(), maxi(1, info.get("quota", 0) + quota_delta)]
+	money_label.text = tr("돈 %s원") % _won(st.money)
+	quota_label.text = tr("보냄 %d / %d") % [sent_today.size(), maxi(1, info.get("quota", 0) + quota_delta)]
 	quota_label.visible = info.get("quota", 0) > 0
 	var left := 4 - int(st.day) % 6
-	rent_label.text = "월세 D-%d" % left if left > 0 else "월세 오늘"
+	rent_label.text = tr("월세 D-%d") % left if left > 0 else "월세 오늘"
 	rent_label.visible = int(st.day) % 6 < 5 and _week() < 4 and not st.flags.get("live_warehouse", false)
 	susp_bar.value = st.susp
 	heat_bar.value = st.heat
@@ -1393,6 +1400,8 @@ func _won(n: int) -> String:
 
 ## 받침이 있으면 with_b, 없으면 without_b 를 붙인다.
 func _josa(word: String, with_b: String, without_b: String) -> String:
+	if not TranslationServer.get_locale().begins_with("ko"):
+		return word
 	var code := word.unicode_at(word.length() - 1)
 	if code >= 0xAC00 and code <= 0xD7A3 and (code - 0xAC00) % 28 != 0:
 		return word + with_b
@@ -1407,16 +1416,16 @@ var battle := {}
 
 
 func _battle_start(s: Dictionary) -> void:
-	var mine := {"name": "로켓단 지급 꼬렛", "id": 19, "hp": 9, "atk": [1, 3], "move": Extra.MOVES["_loaner"]}
+	var mine := {"name": tr("로켓단 지급 꼬렛"), "id": 19, "hp": 9, "atk": [1, 3], "move": Extra.MOVES["_loaner"]}
 	if not st.home.is_empty():
 		var k: String = st.get("battler", "") if st.home.has(st.get("battler", "")) else st.home.keys()[0]
 		var m: Dictionary = st.home[k]
 		var bond: int = mini(int(m.get("bond", 3)), 6)
-		mine = {"name": m.name, "id": int(m.id), "hp": 8 + bond * 2, "atk": [2, 3 + bond / 3], "move": Extra.MOVES.get(k, ["힘껏 들이받기", "big"])}
+		mine = {"name": tr(m.name), "id": int(m.id), "hp": 8 + bond * 2, "atk": [2, 3 + bond / 3], "move": Extra.MOVES.get(k, ["힘껏 들이받기", "big"])}
 	mine.max = mine.hp
 	battle = {
 		"me": mine, "charged": false,
-		"foe": {"name": s.ename, "id": s.enemy, "hp": s.ehp, "max": s.ehp, "atk": s.eatk}, "foe_charged": false,
+		"foe": {"name": tr(s.ename), "id": s.enemy, "hp": s.ehp, "max": s.ehp, "atk": s.eatk}, "foe_charged": false,
 		"flag": s.flag, "log": [], "move_used": false, "foe_sleep": false,
 	}
 
@@ -1424,7 +1433,7 @@ func _battle_start(s: Dictionary) -> void:
 func _battle_status() -> String:
 	var me: Dictionary = battle.me
 	var foe: Dictionary = battle.foe
-	return "내 %s HP %d/%d   ·   %s HP %d/%d" % [me.name, me.hp, me.max, foe.name, foe.hp, foe.max]
+	return tr("내 %s HP %d/%d   ·   %s HP %d/%d") % [me.name, me.hp, me.max, foe.name, foe.hp, foe.max]
 
 
 func _battle_menu() -> Array:
@@ -1434,7 +1443,7 @@ func _battle_menu() -> Array:
 			{"text": "몸통박치기", "call": "_battle_act", "act": "hit"},
 			{"text": "기 모으기 (다음 공격 두 배)", "call": "_battle_act", "act": "charge"},
 			{"text": "웅크리기 (받는 피해 줄이기)", "call": "_battle_act", "act": "guard"},
-		] + ([] if battle.move_used else [{"text": "특기: %s (한 번만)" % battle.me.move[0], "call": "_battle_act", "act": "move"}])},
+		] + ([] if battle.move_used else [{"text": tr("특기: %s (한 번만)") % tr(battle.me.move[0]), "call": "_battle_act", "act": "move"}])},
 	]
 
 
@@ -1448,32 +1457,32 @@ func _battle_act() -> Array:
 			var dmg := randi_range(me.atk[0], me.atk[1]) * (2 if battle.charged else 1)
 			battle.charged = false
 			foe.hp = maxi(0, foe.hp - dmg)
-			out.append(_say("%s의 몸통박치기! %s에게 %d만큼 먹혔다." % [me.name, foe.name, dmg]).merged({"pokemon": int(me.id)}))
+			out.append(_say(tr("%s의 몸통박치기! %s에게 %d만큼 먹혔다.") % [me.name, foe.name, dmg]).merged({"pokemon": int(me.id)}))
 		"charge":
 			battle.charged = true
-			out.append(_say("%s 숨을 고르며 힘을 모은다." % _josa(me.name, "이", "가")).merged({"pokemon": int(me.id)}))
+			out.append(_say(tr("%s 숨을 고르며 힘을 모은다.") % _josa(me.name, "이", "가")).merged({"pokemon": int(me.id)}))
 		"guard":
-			out.append(_say("%s 몸을 잔뜩 웅크렸다." % _josa(me.name, "이", "가")).merged({"pokemon": int(me.id)}))
+			out.append(_say(tr("%s 몸을 잔뜩 웅크렸다.") % _josa(me.name, "이", "가")).merged({"pokemon": int(me.id)}))
 		"move":
 			battle.move_used = true
 			out += _battle_move(me, foe)
 	if foe.hp > 0 and battle.foe_sleep:
 		battle.foe_sleep = false
-		out.append(_say("%s 꾸벅꾸벅 졸고 있다." % _josa(foe.name, "은", "는")).merged({"pokemon": int(foe.id)}))
+		out.append(_say(tr("%s 꾸벅꾸벅 졸고 있다.") % _josa(foe.name, "은", "는")).merged({"pokemon": int(foe.id)}))
 	elif foe.hp > 0 and battle.get("dodge", false):
 		battle.dodge = false
-		out.append(_say("%s의 공격이 허공을 갈랐다!" % foe.name).merged({"pokemon": int(foe.id)}))
+		out.append(_say(tr("%s의 공격이 허공을 갈랐다!") % foe.name).merged({"pokemon": int(foe.id)}))
 	elif foe.hp > 0:
 		if not battle.foe_charged and randf() < 0.25:
 			battle.foe_charged = true
-			out.append(_say("%s 무언가를 노리고 있다…." % _josa(foe.name, "이", "가")).merged({"pokemon": int(foe.id)}))
+			out.append(_say(tr("%s 무언가를 노리고 있다….") % _josa(foe.name, "이", "가")).merged({"pokemon": int(foe.id)}))
 		else:
 			var dmg := randi_range(foe.atk[0], foe.atk[1]) * (2 if battle.foe_charged else 1)
 			battle.foe_charged = false
 			if act == "guard":
 				dmg = maxi(0, dmg / 3)
 			me.hp = maxi(0, me.hp - dmg)
-			out.append(_say("%s의 공격! %s %d만큼 다쳤다." % [foe.name, _josa(me.name, "이", "가"), dmg]).merged({"pokemon": int(foe.id)}))
+			out.append(_say(tr("%s의 공격! %s %d만큼 다쳤다.") % [foe.name, _josa(me.name, "이", "가"), dmg]).merged({"pokemon": int(foe.id)}))
 	out.append({"t": "battle_next"})
 	return out
 
@@ -1484,16 +1493,16 @@ func _battle_next() -> Array:
 	if foe.hp <= 0:
 		st.flags[battle.flag] = true
 		_unlock("battle_win")
-		return [_say("%s 쓰러졌다. 이겼다!" % _josa(foe.name, "이", "가")).merged({"pokemon": int(me.id)})]
+		return [_say(tr("%s 쓰러졌다. 이겼다!") % _josa(foe.name, "이", "가")).merged({"pokemon": int(me.id)})]
 	if me.hp <= 0:
-		return [_say("%s 쓰러졌다. 졌다…." % _josa(me.name, "이", "가")).merged({"pokemon": int(foe.id)})]
+		return [_say(tr("%s 쓰러졌다. 졌다….") % _josa(me.name, "이", "가")).merged({"pokemon": int(foe.id)})]
 	return _battle_menu()
 
 
 ## 원룸 식구의 특기. 한 배틀에 한 번.
 func _battle_move(me: Dictionary, foe: Dictionary) -> Array:
-	var move_name: String = me.move[0]
-	var out := [_say("%s의 %s!" % [me.name, move_name]).merged({"pokemon": int(me.id)})]
+	var move_name: String = tr(me.move[0])
+	var out := [_say(tr("%s의 %s!") % [me.name, move_name]).merged({"pokemon": int(me.id)})]
 	var dmg := 0
 	match me.move[1]:
 		"big":
@@ -1503,14 +1512,14 @@ func _battle_move(me: Dictionary, foe: Dictionary) -> Array:
 			out.append(_say("두 번 연달아 맞혔다!"))
 		"copy":
 			dmg = int(foe.atk[1]) * 2
-			out.append(_say("%s의 모습으로 변하더니 똑같은 공격을 두 배로 돌려주었다!" % foe.name))
+			out.append(_say(tr("%s의 모습으로 변하더니 똑같은 공격을 두 배로 돌려주었다!") % foe.name))
 		"dodge":
 			battle.dodge = true
 			battle.charged = true
 			out.append(_say("상대의 등 뒤로 순간이동했다. 다음 공격에 힘이 실린다."))
 		"sleep":
 			battle.foe_sleep = true
-			out.append(_say("길게 하품을 했다. 보고 있던 %s 눈꺼풀이 무거워진다." % _josa(foe.name, "의", "의")))
+			out.append(_say(tr("길게 하품을 했다. 보고 있던 %s 눈꺼풀이 무거워진다.") % _josa(foe.name, "의", "의")))
 		"coin":
 			dmg = 3
 			st.money += 300
@@ -1518,7 +1527,7 @@ func _battle_move(me: Dictionary, foe: Dictionary) -> Array:
 			out.append(_say("동전이 쏟아졌다. 300원을 주웠다."))
 	if dmg > 0:
 		foe.hp = maxi(0, foe.hp - dmg)
-		out.append(_say("%s에게 %d만큼 먹혔다." % [foe.name, dmg]))
+		out.append(_say(tr("%s에게 %d만큼 먹혔다.") % [foe.name, dmg]))
 	return out
 
 
@@ -1565,7 +1574,7 @@ func _home_steps() -> Array:
 	for k in st.home:
 		var m: Dictionary = st.home[k]
 		var tag := " · 배틀에 나선다" if st.get("battler", "") != k else ""
-		opts.append({"text": "%s 산책시킨다 (친밀도 +1%s)" % [_josa(m.name, "을", "를"), tag], "call": "_walk_home", "hkey": k})
+		opts.append({"text": tr("%s 산책시킨다 (친밀도 +1%s)") % [_josa(tr(m.name), "을", "를"), tag], "call": "_walk_home", "hkey": k})
 	opts.append({"text": "그냥 잔다"})
 	return [{"t": "choice", "options": opts}]
 
@@ -1575,4 +1584,70 @@ func _walk_home() -> Array:
 	var m: Dictionary = st.home[k]
 	m.bond = int(m.get("bond", 3)) + 1
 	st.battler = k
-	return [_say("%s 데리고 동네를 한 바퀴 돌았다. 녀석은 가로등 밑에서 한참 냄새를 맡았다. 다음에 배틀이 붙으면 이 녀석이 나설 것이다." % _josa(m.name, "을", "를")).merged({"pokemon": int(m.id)})]
+	return [_say(tr("%s 데리고 동네를 한 바퀴 돌았다. 녀석은 가로등 밑에서 한참 냄새를 맡았다. 다음에 배틀이 붙으면 이 녀석이 나설 것이다.") % _josa(tr(m.name), "을", "를")).merged({"pokemon": int(m.id)})]
+
+
+# ── 설정 ──────────────────────────────────────────────
+
+func _setup_settings() -> void:
+	if FileAccess.file_exists(SETTINGS_PATH):
+		var sf := FileAccess.open(SETTINGS_PATH, FileAccess.READ)
+		var parsed = JSON.parse_string(sf.get_as_text()) if sf else null
+		if parsed is Dictionary:
+			settings.merge(parsed, true)
+	if settings.lang == "":
+		settings.lang = "ko" if OS.get_locale().begins_with("ko") else "en"
+	var lang_opt: OptionButton = %LangOpt
+	lang_opt.add_item("한국어")
+	lang_opt.add_item("English")
+	lang_opt.set_item_auto_translate_mode(0, Node.AUTO_TRANSLATE_MODE_DISABLED)
+	lang_opt.set_item_auto_translate_mode(1, Node.AUTO_TRANSLATE_MODE_DISABLED)
+	lang_opt.select(maxi(0, LANGS.find(settings.lang)))
+	lang_opt.item_selected.connect(func(i): settings.lang = LANGS[i]; _apply_settings())
+	var speed_opt: OptionButton = %SpeedOpt
+	for t in ["느리게", "보통", "빠르게", "바로"]:
+		speed_opt.add_item(t)
+	speed_opt.select(int(settings.speed))
+	speed_opt.item_selected.connect(func(i): settings.speed = i; _apply_settings())
+	%MusicSlider.value = settings.music
+	%MusicSlider.value_changed.connect(func(v): settings.music = v; _apply_settings())
+	%SfxSlider.value = settings.sfx
+	%SfxSlider.value_changed.connect(func(v): settings.sfx = v; _apply_settings())
+	var pc := not OS.has_feature("web") and not OS.has_feature("mobile")
+	%FullText.visible = pc
+	%FullCheck.visible = pc
+	%FullCheck.button_pressed = settings.fullscreen
+	%FullCheck.toggled.connect(func(on): settings.fullscreen = on; _apply_settings())
+	%SettingsBtn.pressed.connect(func(): _open_settings())
+	%SettingsClose.pressed.connect(_close_settings)
+	_apply_settings(false)
+
+
+func _apply_settings(save := true) -> void:
+	TranslationServer.set_locale(settings.lang)
+	bgm.volume_db = linear_to_db(maxf(0.001, settings.music)) - 8.0
+	sfx.volume_db = linear_to_db(maxf(0.001, settings.sfx))
+	if not OS.has_feature("web") and not OS.has_feature("mobile"):
+		var want := DisplayServer.WINDOW_MODE_FULLSCREEN if settings.fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
+		if DisplayServer.window_get_mode() != want:
+			DisplayServer.window_set_mode(want)
+	_refresh_bar()
+	if save:
+		var sf := FileAccess.open(SETTINGS_PATH, FileAccess.WRITE)
+		if sf:
+			sf.store_string(JSON.stringify(settings))
+
+
+func _open_settings() -> Array:
+	before_settings = waiting
+	waiting = "settings"
+	%SettingsLayer.show()
+	return []
+
+
+func _close_settings() -> void:
+	%SettingsLayer.hide()
+	if st.is_empty():
+		_title_menu()   # 타이틀에서 열었으면 메뉴 글자를 새 언어로 다시 그린다
+		return
+	waiting = before_settings
