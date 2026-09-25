@@ -201,6 +201,7 @@ const DAYS := [
 					{"t": "say", "who": "narr", "if": "help:ditto", "text": "그때 정문 경비실에서 또 한 명의 아폴로가 걸어 나왔다. 그 아폴로는 눈이 점 두 개였다. 그 아폴로가 정문 레버를 당겼다."},
 					{"t": "say", "who": "apollo", "if": "help:ditto", "text": "뭐, 뭐야? 나는 여기 있는데!", "shake": true},
 					{"t": "say", "who": "narr", "if": "help:ditto", "text": "정문이 열렸다. 메타몽은 흐물흐물 녹아 짐칸으로 뛰어올랐다. 풀밭에서 먹이를 주던 그 녀석이었다."},
+					{"t": "ach", "if": "help:ditto", "id": "meadow_debt"},
 					{"t": "say", "who": "roy", "if": "!help:ditto", "text": "내가 막을게. 먼저 가!"},
 					{"t": "say", "who": "narr", "if": "!help:ditto", "text": "로이가 운전석에서 뛰어내려 아폴로에게 달려들었다. 로사가 운전대를 잡았다. 뒤돌아봤을 때 로이는 아폴로의 부하들에게 둘러싸여 있었다."},
 					{"t": "fx", "if": "!help:ditto", "flag": "roy_left"},

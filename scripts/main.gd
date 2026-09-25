@@ -7,8 +7,10 @@ const W3 = preload("res://scripts/data/week3.gd")
 const W4 = preload("res://scripts/data/week4.gd")
 const Extra = preload("res://scripts/data/extra.gd")
 const AnimMeta = preload("res://scripts/data/anim_meta.gd")
+const Ach = preload("res://scripts/data/achievements.gd")
 
 const SAVE_PATH := "user://save.json"
+const ACH_PATH := "user://achievements.json"   # 새로 시작해도 남는다
 const START_MONEY := 2000
 const RENT := 12000
 const SENIOR_HELP := 3000   # 금요일에 모자라면 선배들이 보태 주는 한도
@@ -60,6 +62,10 @@ const TRIO_TEX := preload("res://assets/trainers/teamrocket.png")
 @onready var fader: ColorRect = %Fader
 @onready var bgm: AudioStreamPlayer = %Bgm
 @onready var sfx: AudioStreamPlayer = %Sfx
+@onready var toast_panel: Control = %ToastPanel
+@onready var toast_label: Label = %ToastLabel
+@onready var ach_panel: Control = %AchPanel
+@onready var ach_label: Label = %AchLabel
 
 var days: Array = []
 var choice_btns: Array[Button] = []
@@ -86,6 +92,8 @@ var bgm_name := ""
 var anims := {}   # TextureRect -> {frames, w, h, ms, t}
 var last_pick := 0
 var base_pos := {}  # 흔들림 · 튀어 오르기 뒤 돌아갈 자리
+var achieved := {}
+var toast_tween: Tween
 
 
 func _ready() -> void:
@@ -100,6 +108,9 @@ func _ready() -> void:
 	restart_btn.pressed.connect(func(): get_tree().reload_current_scene())
 	for n in [stage, dialog_panel, crate_sprite]:
 		base_pos[n] = n.position
+	if FileAccess.file_exists(ACH_PATH):
+		achieved = JSON.parse_string(FileAccess.open(ACH_PATH, FileAccess.READ).get_as_text())
+	%AchClose.pressed.connect(func(): ach_panel.hide(); _title_menu())
 	_title_menu()
 
 
@@ -136,7 +147,51 @@ func _title_menu() -> void:
 	var opts := [{"text": "처음부터", "call": "_new_game"}]
 	if FileAccess.file_exists(SAVE_PATH):
 		opts.push_front({"text": "이어하기", "call": "_load_game"})
+	opts.append({"text": "도전 과제 (%d / %d)" % [achieved.size(), Ach.LIST.size()], "call": "_show_achievements"})
 	_show_choice(opts)
+
+
+func _show_achievements() -> Array:
+	_hide_all()
+	waiting = "menu"
+	var lines := []
+	for a in Ach.LIST:
+		if achieved.has(a.id):
+			var code := "" if OS.has_feature("web") else "   [%s]" % a.code
+			lines.append("[달성] %s%s
+    %s" % [a.name, code, a.desc])
+		else:
+			lines.append("[ ] ???
+    %s" % ("어떤 결말에 이른다." if a.has("end") else a.desc))
+	ach_label.text = "
+".join(PackedStringArray(lines))
+	ach_panel.show()
+	return []
+
+
+## 도전 과제 달성. 웹판은 SKEAM 에 알리고, exe판은 등록 코드를 보여 준다.
+func _unlock(id: String) -> void:
+	if achieved.has(id):
+		return
+	achieved[id] = true
+	FileAccess.open(ACH_PATH, FileAccess.WRITE).store_string(JSON.stringify(achieved))
+	var a: Dictionary = Ach.LIST.filter(func(x): return x.id == id)[0]
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("window.SKEAM && SKEAM.unlock('%s')" % id)
+		toast_label.text = "도전 과제 달성
+%s" % a.name
+	else:
+		toast_label.text = "도전 과제 달성: %s
+등록 코드 %s" % [a.name, a.code]
+	toast_panel.show()
+	toast_panel.modulate.a = 0.0
+	if toast_tween:
+		toast_tween.kill()
+	toast_tween = create_tween()
+	toast_tween.tween_property(toast_panel, "modulate:a", 1.0, 0.25)
+	toast_tween.tween_interval(4.0)
+	toast_tween.tween_property(toast_panel, "modulate:a", 0.0, 0.5)
+	toast_tween.tween_callback(toast_panel.hide)
 
 
 func _new_game() -> Array:
@@ -171,6 +226,8 @@ func _save() -> void:
 # ── 단계 진행 ──────────────────────────────────────────
 
 func _start_day(d: int) -> void:
+	if d == 1:
+		_unlock("first_day")
 	st.day = d
 	_save()
 	var info: Dictionary = days[d]
@@ -249,6 +306,8 @@ func _advance() -> void:
 				queue = _visit_steps() + queue
 			"epilogue":
 				queue = W4.EPILOGUE + queue
+			"ach":
+				_unlock(s.id)
 			"end":
 				_show_end(s.text)
 				return
@@ -275,6 +334,9 @@ func _show_title(text: String) -> void:
 func _show_end(text: String) -> void:
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	for a in Ach.LIST:
+		if a.get("end", "") == text:
+			_unlock(a.id)
 	fader.modulate.a = 0.7
 	title_label.text = text
 	title_label.show()
@@ -419,6 +481,8 @@ func _apply(d: Dictionary) -> void:
 	for k in d.get("trust", {}):
 		st.trust[k] += d.trust[k]
 	st.sena += d.get("sena", 0)
+	if st.sena >= 2:
+		_unlock("same_month")
 	st.watch += d.get("watch", 0)
 	_refresh_bar()
 
@@ -435,6 +499,7 @@ func _add_susp(n: int) -> void:
 		return
 	# 처음 한 번은 마지막 경고로 끝난다.
 	st.flags["last_warning"] = true
+	_unlock("last_warning")
 	st.susp = 60
 	st.money -= LAST_WARNING_FINE
 	var warn := [
@@ -511,6 +576,9 @@ func _on_release() -> void:
 	st.rel[c.key] = true
 	released_today.append(c)
 	st.released_total += 1
+	_unlock("back_door")
+	if c.key == "eevee":
+		_unlock("ribbon")
 	if c.has("stray"):
 		st.meadow[c.key] = {"name": c.name if not c.has("reveal") else c.reveal.split("(")[0], "id": c.id, "days": c.stray, "fed": false}
 	if not c.get("reject", false):
@@ -525,6 +593,9 @@ func _on_return() -> void:
 	st.ret[c.key] = true
 	released_today.append(c)
 	st.money -= POSTAGE
+	_unlock("no_sender")
+	if c.key == "vaporeon":
+		_unlock("ribbon")
 	if c.has("ret_news"):
 		st.news.append(c.ret_news)
 	_add_susp(int(c.risk * 0.5))
@@ -537,6 +608,8 @@ func _on_special() -> void:
 	var c: Dictionary = crates[crate_i]
 	st.spc[c.key] = true
 	kept_today.append(c)
+	if c.key == "arbok":
+		_unlock("m04")
 	_apply(c.special)
 	queue = c.special.get("steps", []).map(func(x): return x.merged({"pokemon": c.id}) if x.get("who") == "narr" else x) + [{"t": "work_next"}] + queue
 	_advance()
@@ -790,6 +863,7 @@ func _slot_pull() -> Array:
 		win = 7500
 		line = "7 7 7! 잭팟이다! 동전이 쏟아졌다."
 		_play_sfx("jackpot")
+		_unlock("jackpot")
 	elif r < 0.12:
 		win = 2000
 		line = "체리가 셋 나란히 섰다."
@@ -830,6 +904,8 @@ func _buy_prize() -> Array:
 		if p.key == key:
 			st.money -= p.cost
 			st.flags["bought_" + key] = true
+			if key == "butterfree":
+				_unlock("prize_case")
 			_refresh_bar()
 			return p.steps.duplicate()
 	return []
@@ -852,6 +928,8 @@ func _buy_item() -> Array:
 		if it.key == key:
 			st.money -= it.cost
 			st.items[key] = true
+			if st.items.size() == Extra.ITEMS.size():
+				_unlock("my_room")
 			_refresh_bar()
 			return [_say("%s 샀다. 원룸에 가져다 두었다." % _josa(it.text.split(" (")[0], "을", "를"))]
 	return []

@@ -52,6 +52,7 @@ func _initialize() -> void:
 				return
 	print("## ", m.title_label.text, "   돈 %d  풀어준 수 %d  돌려보낸 수 %d  의심도 %d" % [m.st.money, m.st.released_total, m.st.ret.size(), m.st.susp])
 	print("FLAGS ", m.st.flags.keys())
+	print("ACH ", m.achieved.keys())
 	quit()
 
 

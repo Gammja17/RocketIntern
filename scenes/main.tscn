@@ -401,6 +401,62 @@ offset_right = 580.0
 offset_bottom = 490.0
 text = "타이틀로"
 
+[node name="ToastPanel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+offset_left = 584.0
+offset_top = 46.0
+offset_right = 944.0
+offset_bottom = 110.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("paper")
+
+[node name="ToastLabel" type="Label" parent="ToastPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.1, 0.1, 1)
+theme_override_font_sizes/font_size = 18
+autowrap_mode = 3
+
+[node name="AchPanel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+offset_left = 120.0
+offset_top = 40.0
+offset_right = 840.0
+offset_bottom = 520.0
+theme_override_styles/panel = SubResource("panel")
+
+[node name="VBox" type="VBoxContainer" parent="AchPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="AchTitle" type="Label" parent="AchPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.82, 0.35, 1)
+text = "도전 과제"
+
+[node name="Scroll" type="ScrollContainer" parent="AchPanel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="AchLabel" type="Label" parent="AchPanel/VBox/Scroll"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(660, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+autowrap_mode = 3
+
+[node name="AchClose" type="Button" parent="AchPanel/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "닫기"
+
 [node name="Bgm" type="AudioStreamPlayer" parent="."]
 unique_name_in_owner = true
 volume_db = -8.0

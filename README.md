@@ -18,6 +18,13 @@
 ## 결말
 안 읽는 게 편해 · 기록 상자 · 마지막 트럭 · 첫 포켓몬 · 돌아온 차례 · 빈 몬스터볼 · 뒷문으로 나간 사람(해고) · 잠긴 창고
 
+## 도전 과제
+20개. 목록과 exe 등록 코드는 `scripts/data/achievements.gd`에 있다. 웹판은 달성할 때 `SKEAM.unlock(id)`를 부르고, SDK는 내보내기 설정의 head_include로 넣는다. exe판은 달성하면 화면 오른쪽 위에 등록 코드를 보여 준다. 타이틀의 "도전 과제" 메뉴에서 달성한 과제의 코드를 다시 볼 수 있다. 달성 기록은 `user://achievements.json`에 남아서 새로 시작해도 유지된다.
+
+## 배포
+- 웹판: main에 올리면 `.github/workflows/pages.yml`이 내보내서 https://gammja17.github.io/RocketIntern/ 에 올린다.
+- exe판: 128MB라 git에 못 올린다. 이 PC에서 내보낸 뒤 zip으로 묶어 GitHub Release에 직접 올린다.
+
 ## 구조
 - `scripts/data/week1.gd`~`week4.gd`: 대본과 상자. 형식은 `scripts/data/README.md`
 - `scripts/data/extra.gd`: 인물, 토요일 장소, 경품, 백화점 물건, 풀밭
