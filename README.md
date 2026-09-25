@@ -23,7 +23,7 @@
 갈 곳 없는 녀석만 며칠씩 머문다. 밤마다 먹이 주기, 한 마리와 놀아 주기, 은신처 만들기 중 하나를 고른다. 친밀도가 3이 되면 떠나지 않고, 원룸에 데려갈 수 있다(최대 3마리). 데려간 녀석은 배틀에 나서고, 저마다 쓸모가 있다(캐이시는 체포 순간 순간이동, 메타몽은 가택 수색 때 인형 흉내, 폴리곤은 본사 기록 지우기).
 
 ## 배틀
-투기장 경비, 그린, 아폴로와 한 번씩. 원룸의 첫 포켓몬이 나서고, 없으면 로켓단 지급 꼬렛이 나선다. 이기고 지는 것에 따라 이야기가 갈린다.
+투기장 경비, 그린, 아폴로와 한 번씩. 마지막으로 산책한 원룸 식구가 나서고, 없으면 로켓단 지급 꼬렛이 나선다. 저마다 한 번 쓸 수 있는 특기가 있다. 이기고 지는 것에 따라 이야기가 갈린다.
 
 ## 결말
 큰 결말 10개: 안 읽는 게 편해 · 기록 상자 · 거래 · 마지막 트럭 · 첫 포켓몬 · 돌아온 차례 · 빈 몬스터볼 · 수갑 · 뒷문으로 나간 사람(해고) · 잠긴 창고.
@@ -54,6 +54,7 @@
 - 트레이너 그림 `assets/trainers/`: Pokémon Showdown (https://play.pokemonshowdown.com/sprites/trainers/)
 - 배경 `assets/bg/city · meadow · forest`: Pokémon Showdown 배틀 배경
 - 배경 `assets/bg/warehouse · room · stall · gamecorner · archive · silph`: PixelLab으로 생성
+- 울음소리 `assets/cries/`: Pokémon Showdown (https://play.pokemonshowdown.com/audio/cries/)
 - 음악 `assets/music/`: 포켓몬 파이어레드 · 리프그린 사운드트랙 (archive.org `pkmn-frlg-soundtrack`)
 - 글꼴 `assets/fonts/Mulmaru.woff2`: 물마루 by Mushsooni, SIL OFL 1.1 (`Mulmaru-LICENSE.txt`)
 
