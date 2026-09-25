@@ -110,6 +110,9 @@ func _ready() -> void:
 		base_pos[n] = n.position
 	if FileAccess.file_exists(ACH_PATH):
 		achieved = JSON.parse_string(FileAccess.open(ACH_PATH, FileAccess.READ).get_as_text())
+	if OS.has_feature("web"):
+		for id in achieved:   # 켤 때마다 이미 이룬 과제를 SKEAM 에 다시 알린다
+			JavaScriptBridge.eval("window.SKEAM && SKEAM.unlock('%s')" % id)
 	%AchClose.pressed.connect(func(): ach_panel.hide(); _title_menu())
 	_title_menu()
 
@@ -171,13 +174,15 @@ func _show_achievements() -> Array:
 
 ## 도전 과제 달성. 웹판은 SKEAM 에 알리고, exe판은 등록 코드를 보여 준다.
 func _unlock(id: String) -> void:
+	if OS.has_feature("web"):
+		# 이미 달성한 과제도 알린다. SKEAM 은 한 번만 세고, 등록 전에 이룬 과제도 이렇게 해야 반영된다.
+		JavaScriptBridge.eval("window.SKEAM && SKEAM.unlock('%s')" % id)
 	if achieved.has(id):
 		return
 	achieved[id] = true
 	FileAccess.open(ACH_PATH, FileAccess.WRITE).store_string(JSON.stringify(achieved))
 	var a: Dictionary = Ach.LIST.filter(func(x): return x.id == id)[0]
 	if OS.has_feature("web"):
-		JavaScriptBridge.eval("window.SKEAM && SKEAM.unlock('%s')" % id)
 		toast_label.text = "도전 과제 달성
 %s" % a.name
 	else:
