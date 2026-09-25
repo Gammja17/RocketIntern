@@ -223,6 +223,7 @@ func _new_game() -> Array:
 		"day": 0, "money": START_MONEY, "susp": 0, "flags": {}, "sent": {}, "rel": {}, "ret": {}, "spc": {},
 		"trust": {"rosa": 0, "roy": 0, "meowth": 0}, "sena": 0, "watch": 0, "meadow": {}, "help": {},
 		"items": {}, "visited": {}, "released_total": 0, "news": [], "heat": 0, "home": {},
+		"seed": randi(),
 	}
 	_start_day(0)
 	return []
@@ -260,6 +261,7 @@ func _start_day(d: int) -> void:
 	_save()
 	var info: Dictionary = days[d]
 	crates = info.get("crates", []).filter(func(c): return not c.has("if") or _check(c["if"]))
+	_randomize_wild(d)
 	crate_i = 0
 	sent_today.clear()
 	rejected_today.clear()
@@ -347,6 +349,24 @@ func _advance() -> void:
 			"end":
 				_show_end(s.text)
 				return
+
+
+## 사연 없는 채우기용 상자는 판마다 다른 야생 포켓몬이 된다. 판의 씨앗과 날짜로 정해서, 이어 해도 같은 녀석이 나온다.
+func _randomize_wild(d: int) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(st.get("seed", 0)) * 31 + d
+	var pool: Array = Extra.WILD.duplicate()
+	for i in crates.size():
+		var c: Dictionary = crates[i]
+		var plain := true
+		for k in ["named", "owner", "wanted", "reject", "stray", "special", "item", "intro", "bonus"]:
+			if c.has(k):
+				plain = false
+		if not plain or pool.is_empty():
+			continue
+		var w: Array = pool.pop_at(rng.randi_range(0, pool.size() - 1))
+		var memos: Array = w[2]
+		crates[i] = c.merged({"id": w[0], "name": w[1], "memo": memos[rng.randi_range(0, memos.size() - 1)]}, true)
 
 
 func _hide_all() -> void:
