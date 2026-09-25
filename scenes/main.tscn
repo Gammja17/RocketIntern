@@ -1,0 +1,290 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="Theme" path="res://assets/theme.tres" id="2_theme"]
+
+[sub_resource type="StyleBoxFlat" id="panel"]
+content_margin_left = 16.0
+content_margin_top = 12.0
+content_margin_right = 16.0
+content_margin_bottom = 12.0
+bg_color = Color(0.16, 0.14, 0.2, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.78, 0.2, 0.26, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="susp_bg"]
+bg_color = Color(0.2, 0.18, 0.24, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.5, 0.48, 0.56, 1)
+
+[sub_resource type="StyleBoxFlat" id="susp_fill"]
+bg_color = Color(0.9, 0.25, 0.3, 1)
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_main")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.09, 0.08, 0.12, 1)
+
+[node name="TopBar" type="HBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 12.0
+offset_right = 936.0
+offset_bottom = 44.0
+mouse_filter = 2
+theme_override_constants/separation = 24
+
+[node name="DayLabel" type="Label" parent="TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.82, 0.35, 1)
+text = "월요일"
+
+[node name="Spacer" type="Control" parent="TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="MoneyLabel" type="Label" parent="TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "돈 2,000원"
+
+[node name="QuotaLabel" type="Label" parent="TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "보냄 0 / 4"
+
+[node name="RentLabel" type="Label" parent="TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "월세 D-4"
+
+[node name="SuspText" type="Label" parent="TopBar"]
+layout_mode = 2
+text = "의심도"
+
+[node name="SuspBar" type="ProgressBar" parent="TopBar"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(140, 20)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_styles/background = SubResource("susp_bg")
+theme_override_styles/fill = SubResource("susp_fill")
+show_percentage = false
+
+[node name="RuleLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 24.0
+offset_top = 52.0
+offset_right = 936.0
+offset_bottom = 86.0
+theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Stage" type="TextureRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 360.0
+offset_top = 96.0
+offset_right = 600.0
+offset_bottom = 336.0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="WorkPanel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 96.0
+offset_top = 96.0
+offset_right = 864.0
+offset_bottom = 480.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("panel")
+
+[node name="VBox" type="VBoxContainer" parent="WorkPanel"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="CrateLabel" type="Label" parent="WorkPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.78, 1)
+text = "상자 1 / 6"
+
+[node name="HBox" type="HBoxContainer" parent="WorkPanel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/separation = 24
+
+[node name="CrateSprite" type="TextureRect" parent="WorkPanel/VBox/HBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(192, 192)
+layout_mode = 2
+size_flags_vertical = 0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Info" type="VBoxContainer" parent="WorkPanel/VBox/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="NameLabel" type="Label" parent="WorkPanel/VBox/HBox/Info"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 36
+text = "꼬렛"
+
+[node name="MemoLabel" type="Label" parent="WorkPanel/VBox/HBox/Info"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(480, 0)
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="ItemLabel" type="Label" parent="WorkPanel/VBox/HBox/Info"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(480, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.7, 0.7, 1)
+autowrap_mode = 3
+
+[node name="Buttons" type="HBoxContainer" parent="WorkPanel/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 32
+alignment = 1
+
+[node name="SendBtn" type="Button" parent="WorkPanel/VBox/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 52)
+layout_mode = 2
+text = "본사 트럭에 싣기"
+
+[node name="ReleaseBtn" type="Button" parent="WorkPanel/VBox/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 52)
+layout_mode = 2
+text = "뒷문으로 풀어주기"
+
+[node name="DialogPanel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 24.0
+offset_top = 360.0
+offset_right = 936.0
+offset_bottom = 528.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("panel")
+
+[node name="HBox" type="HBoxContainer" parent="DialogPanel"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 16
+
+[node name="Portrait" type="TextureRect" parent="DialogPanel/HBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="VBox" type="VBoxContainer" parent="DialogPanel/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="SpeakerLabel" type="Label" parent="DialogPanel/HBox/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.82, 0.35, 1)
+
+[node name="TextLabel" type="Label" parent="DialogPanel/HBox/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+autowrap_mode = 3
+
+[node name="HintLabel" type="Label" parent="DialogPanel/HBox/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.55, 0.62, 1)
+theme_override_font_sizes/font_size = 12
+text = "클릭 또는 스페이스로 넘기기"
+horizontal_alignment = 2
+
+[node name="ChoiceBox" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 240.0
+offset_top = 352.0
+offset_right = 720.0
+offset_bottom = 480.0
+mouse_filter = 2
+theme_override_constants/separation = 16
+
+[node name="Choice0" type="Button" parent="ChoiceBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+
+[node name="Choice1" type="Button" parent="ChoiceBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 36
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RestartBtn" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 380.0
+offset_top = 400.0
+offset_right = 580.0
+offset_bottom = 452.0
+text = "처음부터"
