@@ -11,7 +11,8 @@ const Ach = preload("res://scripts/data/achievements.gd")
 
 const SAVE_PATH := "user://save.json"
 const ACH_PATH := "user://achievements.json"   # 새로 시작해도 남는다
-const RECORDS_PATH := "user://records.json"    # 본 결말과 동료 운명 (기록실). 새로 시작해도 남는다
+const RECORDS_PATH := "user://records.json"
+const BACKUP_KEY := "rocketintern_backup"   # 웹판: 브라우저 localStorage 에 한 벌 더 남긴다    # 본 결말과 동료 운명 (기록실). 새로 시작해도 남는다
 const EVENT_CHANCE := 0.55  # 평일 아침에 창고 안 사건이 끼어들 확률
 const GUEST_CHANCE := 0.3   # 밤에 풀밭 손님이 들를 확률
 const START_MONEY := 2000
@@ -59,7 +60,7 @@ const PORTRAIT := {
 	"RestartBtn": Rect2(170, 760, 200, 56),
 	"ToastPanel": Rect2(150, 90, 382, 70),
 	"AchPanel": Rect2(12, 60, 516, 880),
-	"SettingsLayer/SettingsPanel": Rect2(20, 220, 500, 380),
+	"SettingsLayer/SettingsPanel": Rect2(20, 160, 500, 520),
 }
 
 const TRIO_TEX := preload("res://assets/trainers/teamrocket.png")
@@ -153,6 +154,7 @@ func _ready() -> void:
 	get_window().size_changed.connect(_apply_layout)
 	_apply_layout()
 	_setup_settings()
+	_web_restore()
 	if FileAccess.file_exists(ACH_PATH):
 		var af := FileAccess.open(ACH_PATH, FileAccess.READ)
 		var parsed = JSON.parse_string(af.get_as_text()) if af else null
@@ -214,6 +216,9 @@ func _title_menu() -> void:
 	_play_bgm("hideout")
 	title_label.text = "로켓단 신입사원"
 	title_label.show()
+	if _storage_fragile():
+		rule_label.text = "이 브라우저에서는 저장이 지워질 수 있어요. 설정에서 저장 코드를 복사해 두세요."
+		rule_label.show()
 	var opts := [{"text": "처음부터", "call": "_new_game"}]
 	if FileAccess.file_exists(SAVE_PATH):
 		opts.push_front({"text": "이어하기", "call": "_load_game"})
@@ -270,6 +275,7 @@ func _save_records() -> void:
 	var rf := FileAccess.open(RECORDS_PATH, FileAccess.WRITE)
 	if rf:
 		rf.store_string(JSON.stringify(records))
+	_web_backup()
 
 
 ## 도전 과제 달성. 웹판은 SKEAM 에 알리고, exe판은 등록 코드를 보여 준다.
@@ -283,6 +289,7 @@ func _unlock(id: String) -> void:
 	var af := FileAccess.open(ACH_PATH, FileAccess.WRITE)
 	if af:   # 저장소가 잠겨 있으면 이번엔 건너뛴다
 		af.store_string(JSON.stringify(achieved))
+	_web_backup()
 	var a: Dictionary = Ach.LIST.filter(func(x): return x.id == id)[0]
 	if OS.has_feature("web"):
 		toast_label.text = tr("도전 과제 달성\n%s") % tr(a.name)
@@ -333,6 +340,7 @@ func _save() -> void:
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f:   # 저장소가 잠겨 있으면 이번엔 건너뛴다
 		f.store_string(JSON.stringify(st))
+	_web_backup()
 
 
 # ── 단계 진행 ──────────────────────────────────────────
@@ -482,6 +490,8 @@ func _show_title(text: String) -> void:
 func _show_end(text: String) -> void:
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	st.ended = true
+	_web_backup()
 	for a in Ach.LIST:
 		if a.get("end", "") == text:
 			_unlock(a.id)
@@ -1620,6 +1630,8 @@ func _setup_settings() -> void:
 	%FullCheck.toggled.connect(func(on): settings.fullscreen = on; _apply_settings())
 	%SettingsBtn.pressed.connect(func(): _open_settings())
 	%SettingsClose.pressed.connect(_close_settings)
+	%CodeCopy.pressed.connect(_copy_save_code)
+	%CodeLoad.pressed.connect(_load_save_code)
 	_apply_settings(false)
 
 
@@ -1651,3 +1663,85 @@ func _close_settings() -> void:
 		_title_menu()   # 타이틀에서 열었으면 메뉴 글자를 새 언어로 다시 그린다
 		return
 	waiting = before_settings
+
+
+# ── 저장 지키기 (웹) ────────────────────────────────────
+## 웹판은 user:// 가 브라우저 IndexedDB 에 저장된다. SKEAM 처럼 다른 사이트 안의 창(iframe)으로 뜨면
+## 사파리 등이 그 저장소를 격리하거나 지운다. 그래서 localStorage 에 한 벌 더 남기고, 저장 코드로도 옮길 수 있게 한다.
+
+func _bundle() -> Dictionary:
+	var save := {}
+	if not st.is_empty() and not st.get("ended", false):
+		save = st
+	elif FileAccess.file_exists(SAVE_PATH):
+		var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
+		var parsed = JSON.parse_string(f.get_as_text()) if f else null
+		if parsed is Dictionary:
+			save = parsed
+	return {"v": 1, "save": save, "ach": achieved, "records": records}
+
+
+func _web_backup() -> void:
+	if not OS.has_feature("web"):
+		return
+	var text := JSON.stringify(_bundle())
+	JavaScriptBridge.eval("try{localStorage.setItem('%s', %s)}catch(e){}" % [BACKUP_KEY, JSON.stringify(text)])
+
+
+func _web_restore() -> void:
+	if not OS.has_feature("web") or FileAccess.file_exists(SAVE_PATH) or FileAccess.file_exists(ACH_PATH):
+		return
+	var raw = JavaScriptBridge.eval("(function(){try{return localStorage.getItem('%s')||''}catch(e){return ''}})()" % BACKUP_KEY)
+	if raw is String and raw != "":
+		_apply_bundle(JSON.parse_string(raw))
+
+
+## 저장 코드(또는 예비 저장)를 파일로 되살린다.
+func _apply_bundle(b) -> bool:
+	if not b is Dictionary or not b.has("v"):
+		return false
+	var files := {SAVE_PATH: b.get("save", {}), ACH_PATH: b.get("ach", {}), RECORDS_PATH: b.get("records", {})}
+	for path in files:
+		var data = files[path]
+		if data is Dictionary and not data.is_empty():
+			var f := FileAccess.open(path, FileAccess.WRITE)
+			if f:
+				f.store_string(JSON.stringify(data))
+	return true
+
+
+## 저장이 오래 남지 않을 수 있는 환경: 영구 저장소가 없거나, 다른 사이트 안의 창으로 떠 있을 때.
+func _storage_fragile() -> bool:
+	if not OS.has_feature("web"):
+		return false
+	if not OS.is_userfs_persistent():
+		return true
+	return JavaScriptBridge.eval("window.parent !== window") == true
+
+
+func _copy_save_code() -> void:
+	var code := Marshalls.utf8_to_base64(JSON.stringify(_bundle()))
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("window.prompt(%s, %s)" % [JSON.stringify(tr("이 저장 코드를 전부 복사해서 메모장 같은 곳에 붙여 두세요.")), JSON.stringify(code)])
+		%CodeNote.text = tr("저장 코드를 띄웠어요. 복사해 두세요.")
+	else:
+		DisplayServer.clipboard_set(code)
+		%CodeNote.text = tr("저장 코드를 클립보드에 복사했어요.")
+
+
+func _load_save_code() -> void:
+	var code := ""
+	if OS.has_feature("web"):
+		var got = JavaScriptBridge.eval("window.prompt(%s, '')" % JSON.stringify(tr("저장 코드를 붙여 넣으세요.")))
+		code = got if got is String else ""
+	else:
+		code = DisplayServer.clipboard_get()
+	code = code.strip_edges()
+	if code == "":
+		return
+	var parsed = JSON.parse_string(Marshalls.base64_to_utf8(code))
+	if not _apply_bundle(parsed):
+		%CodeNote.text = tr("저장 코드가 올바르지 않아요.")
+		return
+	_web_backup()
+	get_tree().reload_current_scene()

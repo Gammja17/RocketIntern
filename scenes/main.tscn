@@ -511,7 +511,7 @@ color = Color(0, 0, 0, 0.6)
 unique_name_in_owner = true
 layout_mode = 0
 offset_left = 200.0
-offset_top = 80.0
+offset_top = 40.0
 offset_right = 760.0
 offset_bottom = 400.0
 theme_override_styles/panel = SubResource("panel")
@@ -588,11 +588,38 @@ text = "전체 화면"
 unique_name_in_owner = true
 layout_mode = 2
 
+[node name="CodeRow" type="HBoxContainer" parent="SettingsLayer/SettingsPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="CodeCopy" type="Button" parent="SettingsLayer/SettingsPanel/VBox/CodeRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "저장 코드 복사"
+
+[node name="CodeLoad" type="Button" parent="SettingsLayer/SettingsPanel/VBox/CodeRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "저장 코드 불러오기"
+
+[node name="CodeNote" type="Label" parent="SettingsLayer/SettingsPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.82, 0.35, 1)
+theme_override_font_sizes/font_size = 18
+autowrap_mode = 3
+
 [node name="SaveNote" type="Label" parent="SettingsLayer/SettingsPanel/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.78, 1)
 theme_override_font_sizes/font_size = 18
-text = "게임은 매일 아침 자동으로 저장돼요. 하루 도중에 끄면 그날 아침부터 다시 시작해요."
+text = "게임은 매일 아침 자동으로 저장돼요. 하루 도중에 끄면 그날 아침부터 다시 시작해요. 저장 코드를 복사해 두면 다른 기기나 브라우저에서도 이어서 할 수 있어요."
 autowrap_mode = 3
 
 [node name="SettingsClose" type="Button" parent="SettingsLayer/SettingsPanel/VBox"]

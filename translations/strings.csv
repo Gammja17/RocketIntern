@@ -1138,6 +1138,7 @@ M-04는 우리 엄마 아보크 번호야. 어릴 때부터 외우고 있던 번
 자네 차례였던 그 이상해씨 말인가…. 한 달 전에 도둑맞았다네. 로켓단 짓이라더군. 미안하네.,자네 차례였던 그 이상해씨 말인가…. 한 달 전에 도둑맞았다네. 로켓단 짓이라더군. 미안하네.,"The Bulbasaur that was meant for you...? It was stolen a month ago. Team Rocket, they say. I'm sorry."
 "빈 몬스터볼을 도로 주머니에 넣었다. 누가 그 녀석을 트럭에 실었는지, 나는 알고 있었다.","빈 몬스터볼을 도로 주머니에 넣었다. 누가 그 녀석을 트럭에 실었는지, 나는 알고 있었다.",I put the empty Poké Ball back in my pocket. I knew exactly who had loaded it onto that truck.
 로켓단 신입사원,로켓단 신입사원,Team Rocket Intern Days
+이 브라우저에서는 저장이 지워질 수 있어요. 설정에서 저장 코드를 복사해 두세요.,이 브라우저에서는 저장이 지워질 수 있어요. 설정에서 저장 코드를 복사해 두세요.,This browser may erase your save. Copy a save code in Settings to be safe.
 처음부터,처음부터,New Game
 이어하기,이어하기,Continue
 설정,설정,Settings
@@ -1286,6 +1287,11 @@ Entry code %s"
 보통,보통,Normal
 빠르게,빠르게,Fast
 바로,바로,Instant
+이 저장 코드를 전부 복사해서 메모장 같은 곳에 붙여 두세요.,이 저장 코드를 전부 복사해서 메모장 같은 곳에 붙여 두세요.,"Copy this whole save code and keep it somewhere safe, like a notes app."
+저장 코드를 띄웠어요. 복사해 두세요.,저장 코드를 띄웠어요. 복사해 두세요.,Save code shown. Copy it somewhere safe.
+저장 코드를 클립보드에 복사했어요.,저장 코드를 클립보드에 복사했어요.,Save code copied to the clipboard.
+저장 코드를 붙여 넣으세요.,저장 코드를 붙여 넣으세요.,Paste your save code.
+저장 코드가 올바르지 않아요.,저장 코드가 올바르지 않아요.,That save code doesn't look right.
 의심도,의심도,Suspicion
 수사망,수사망,Heat
 본사 트럭에 싣기,본사 트럭에 싣기,Load onto HQ truck
@@ -1299,4 +1305,6 @@ Entry code %s"
 효과음,효과음,Sound Effects
 글자 속도,글자 속도,Text Speed
 전체 화면,전체 화면,Fullscreen
-게임은 매일 아침 자동으로 저장돼요. 하루 도중에 끄면 그날 아침부터 다시 시작해요.,게임은 매일 아침 자동으로 저장돼요. 하루 도중에 끄면 그날 아침부터 다시 시작해요.,"The game saves automatically every morning. If you quit mid-day, you'll restart from that morning."
+저장 코드 복사,저장 코드 복사,Copy save code
+저장 코드 불러오기,저장 코드 불러오기,Load save code
+게임은 매일 아침 자동으로 저장돼요. 하루 도중에 끄면 그날 아침부터 다시 시작해요. 저장 코드를 복사해 두면 다른 기기나 브라우저에서도 이어서 할 수 있어요.,게임은 매일 아침 자동으로 저장돼요. 하루 도중에 끄면 그날 아침부터 다시 시작해요. 저장 코드를 복사해 두면 다른 기기나 브라우저에서도 이어서 할 수 있어요.,"The game saves automatically every morning. If you quit mid-day, you restart from that morning. Copy a save code to continue on another device or browser."
