@@ -15,6 +15,9 @@ const LIST := [
 	{"id": "jackpot", "code": "RKT-98BD", "name": "7 7 7", "desc": "게임코너 슬롯에서 잭팟을 터뜨린다."},
 	{"id": "my_room", "code": "RKT-52C3", "name": "내 방", "desc": "백화점에서 원룸 물건 다섯 개를 전부 산다."},
 	{"id": "last_warning", "code": "RKT-B75E", "name": "마지막 경고", "desc": "아폴로에게 마지막 경고를 받는다."},
+	{"id": "adopted", "code": "RKT-6A1E", "name": "한 식구", "desc": "뒷문 풀밭의 포켓몬을 원룸에 데려간다."},
+	{"id": "battle_win", "code": "RKT-3D90", "name": "지급품의 반란", "desc": "포켓몬 배틀에서 처음으로 이긴다."},
+	{"id": "rival", "code": "RKT-E57B", "name": "옆집 애의 라이벌", "desc": "그린을 배틀에서 이긴다."},
 	{"id": "end_rocket", "code": "RKT-35BD", "name": "안 읽는 게 편해", "desc": "아폴로를 따라 성도로 간다.", "end": "엔딩: 안 읽는 게 편해"},
 	{"id": "end_records", "code": "RKT-2473", "name": "기록 상자", "desc": "기록 상자를 들고 경찰에게 간다.", "end": "엔딩: 기록 상자"},
 	{"id": "end_truck", "code": "RKT-CAA8", "name": "마지막 트럭", "desc": "선배들과 마지막 트럭을 몰고 나간다.", "end": "엔딩: 마지막 트럭"},
@@ -22,5 +25,7 @@ const LIST := [
 	{"id": "end_turn", "code": "RKT-CB2D", "name": "돌아온 차례", "desc": "누군가 돌려준 이상해씨를 받는다.", "end": "엔딩: 돌아온 차례"},
 	{"id": "end_empty", "code": "RKT-B10D", "name": "빈 몬스터볼", "desc": "빈 몬스터볼을 들고 고향으로 돌아간다.", "end": "엔딩: 빈 몬스터볼"},
 	{"id": "end_fired", "code": "RKT-2979", "name": "뒷문으로 나간 사람", "desc": "로켓단에서 해고된다.", "end": "엔딩: 뒷문으로 나간 사람"},
+	{"id": "end_deal", "code": "RKT-91C4", "name": "거래", "desc": "기록 상자로 형량을 산다.", "end": "엔딩: 거래"},
+	{"id": "end_cuffed", "code": "RKT-5F28", "name": "수갑", "desc": "검수 기록의 서명 때문에 체포된다.", "end": "엔딩: 수갑"},
 	{"id": "end_locked", "code": "RKT-89E7", "name": "잠긴 창고", "desc": "월세를 못 내고 갈 곳을 잃는다.", "end": "엔딩: 잠긴 창고"},
 ]

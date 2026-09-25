@@ -12,22 +12,35 @@ const Ach = preload("res://scripts/data/achievements.gd")
 const SAVE_PATH := "user://save.json"
 const ACH_PATH := "user://achievements.json"   # 새로 시작해도 남는다
 const START_MONEY := 2000
-const RENT := 12000
-const SENIOR_HELP := 3000   # 금요일에 모자라면 선배들이 보태 주는 한도
-const LIVING := 1000
+const RENTS := [12000, 15000, 15000]   # 주차별 밀린 월세 상환액 (첫 주는 집주인이 봐줬다)
+const SENIOR_HELP := 3000
+const WAREHOUSE_FEE := 6000  # 창고 다락에서 지내면 월세 대신   # 금요일에 모자라면 선배들이 보태 주는 한도
+const LIVING := 1200
 const BASE_PAY := 500
-const PER_SEND := 600
+const PER_SEND := 500
 const QUOTA_BONUS := 1000
 const REJECT_FINE := 500
 const WANTED_FINE := 2000
 const POSTAGE := 500
 const FEED_COST := 300
 const SLOT_BET := 500
-const SUSP_DECAY := 30
-const MEADOW_SUSP := 5      # 풀밭에 두 마리 넘게 머물면 한 마리당 밤마다
+const SUSP_DECAY := 15
+const MEADOW_SUSP := 5      # 풀밭에 두 마리 넘게 머물면 한 마리당 밤마다 (은신처가 있으면 절반)
+const PLAY_SUSP := 3        # 풀밭에서 놀아 주면 나는 소리
+const DEN_COST := 1000
+const BOND_STAY := 3        # 이만큼 친해지면 떠나지 않고, 원룸에 데려갈 수 있다
+const HOME_MAX := 3         # 원룸이 좁다
+const MANKEY_COST := 300    # 원룸의 망키가 냉장고를 연다
+const HEAT_NAMED := 8       # 사연 있는 녀석을 본사로 보내면 오르는 경찰 수사망 (상자에 heat 가 있으면 그 값)
+const HEAT_DECAY := 3       # 밤마다
+const HEAT_QUESTION := 35   # 참고인 조사
+const HEAT_SEARCH := 65     # 가택 수색
+const HEAT_ARREST := 100    # 체포
 const FIRE_AT := 100
 const LAST_WARNING_FINE := 5000
 const TYPE_SPEED := 0.025   # 글자 하나당 초
+const CHOICE_Y := 230.0     # 선택지 위치. 무대에 포켓몬이 서 있으면 그 아래로 내린다
+const CHOICE_Y_LOW := 350.0
 
 const TRIO_TEX := preload("res://assets/trainers/teamrocket.png")
 
@@ -37,6 +50,7 @@ const TRIO_TEX := preload("res://assets/trainers/teamrocket.png")
 @onready var quota_label: Label = %QuotaLabel
 @onready var rent_label: Label = %RentLabel
 @onready var susp_bar: ProgressBar = %SuspBar
+@onready var heat_bar: ProgressBar = %HeatBar
 @onready var top_bar: Control = $TopBarBg
 @onready var rule_label: Label = %RuleLabel
 @onready var stage: TextureRect = %Stage
@@ -109,7 +123,10 @@ func _ready() -> void:
 	for n in [stage, dialog_panel, crate_sprite]:
 		base_pos[n] = n.position
 	if FileAccess.file_exists(ACH_PATH):
-		achieved = JSON.parse_string(FileAccess.open(ACH_PATH, FileAccess.READ).get_as_text())
+		var af := FileAccess.open(ACH_PATH, FileAccess.READ)
+		var parsed = JSON.parse_string(af.get_as_text()) if af else null
+		if parsed is Dictionary:   # 깨진 파일이면 무시한다
+			achieved = parsed
 	if OS.has_feature("web"):
 		for id in achieved:   # 켤 때마다 이미 이룬 과제를 SKEAM 에 다시 알린다
 			JavaScriptBridge.eval("window.SKEAM && SKEAM.unlock('%s')" % id)
@@ -180,7 +197,9 @@ func _unlock(id: String) -> void:
 	if achieved.has(id):
 		return
 	achieved[id] = true
-	FileAccess.open(ACH_PATH, FileAccess.WRITE).store_string(JSON.stringify(achieved))
+	var af := FileAccess.open(ACH_PATH, FileAccess.WRITE)
+	if af:   # 저장소가 잠겨 있으면 이번엔 건너뛴다
+		af.store_string(JSON.stringify(achieved))
 	var a: Dictionary = Ach.LIST.filter(func(x): return x.id == id)[0]
 	if OS.has_feature("web"):
 		toast_label.text = "도전 과제 달성
@@ -203,7 +222,7 @@ func _new_game() -> Array:
 	st = {
 		"day": 0, "money": START_MONEY, "susp": 0, "flags": {}, "sent": {}, "rel": {}, "ret": {}, "spc": {},
 		"trust": {"rosa": 0, "roy": 0, "meowth": 0}, "sena": 0, "watch": 0, "meadow": {}, "help": {},
-		"items": {}, "visited": {}, "released_total": 0, "news": [],
+		"items": {}, "visited": {}, "released_total": 0, "news": [], "heat": 0, "home": {},
 	}
 	_start_day(0)
 	return []
@@ -212,20 +231,24 @@ func _new_game() -> Array:
 func _load_game() -> Array:
 	var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
 	st = JSON.parse_string(f.get_as_text())
-	for k in ["day", "money", "susp", "sena", "watch", "released_total"]:
+	for k in ["day", "money", "susp", "sena", "watch", "released_total", "heat"]:
 		st[k] = int(st[k])
 	for k in st.trust:
 		st.trust[k] = int(st.trust[k])
 	for k in st.meadow:
-		st.meadow[k].days = int(st.meadow[k].days)
-		st.meadow[k].id = int(st.meadow[k].id)
+		for field in ["days", "id", "bond"]:
+			st.meadow[k][field] = int(st.meadow[k][field])
+	for k in st.home:
+		st.home[k].id = int(st.home[k].id)
+		st.home[k].bond = int(st.home[k].get("bond", 3))
 	_start_day(st.day)
 	return []
 
 
 func _save() -> void:
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
-	f.store_string(JSON.stringify(st))
+	if f:   # 저장소가 잠겨 있으면 이번엔 건너뛴다
+		f.store_string(JSON.stringify(st))
 
 
 # ── 단계 진행 ──────────────────────────────────────────
@@ -272,7 +295,7 @@ func _advance() -> void:
 				_apply(s)
 			"choice":
 				var opts: Array = s.options.filter(func(o): return not o.has("if") or _check(o["if"]))
-				_show_choice(opts)
+				_show_choice(opts, s.get("caption", ""), s.get("pokemon", 0))
 				return
 			"work":
 				if crates.is_empty():
@@ -298,7 +321,7 @@ func _advance() -> void:
 			"rent":
 				queue = _rent_steps() + queue
 			"news":
-				queue = _news_steps() + queue
+				queue = _news_steps() + _heat_steps() + queue
 			"free":
 				queue = _free_steps() + queue
 			"slots":
@@ -310,7 +333,15 @@ func _advance() -> void:
 			"visits":
 				queue = _visit_steps() + queue
 			"epilogue":
-				queue = W4.EPILOGUE + queue
+				queue = _fate_steps() + W4.EPILOGUE + _home_epilogue() + queue
+			"ending":
+				st.ending = s.id
+			"battle":
+				_battle_start(s)
+				var intro := _say("%s 앞으로 나섰다. 상대는 %s." % [_josa(battle.me.name, "이", "가"), battle.foe.name]).merged({"pokemon": int(battle.me.id)})
+				queue = [intro] + _battle_menu() + queue
+			"battle_next":
+				queue = _battle_next() + queue
 			"ach":
 				_unlock(s.id)
 			"end":
@@ -448,8 +479,15 @@ func _play_sfx(sfx_name: String) -> void:
 
 # ── 선택지 ─────────────────────────────────────────────
 
-func _show_choice(opts: Array) -> void:
+## caption 은 위쪽 규칙 줄에, pokemon 은 무대에 띄운다 (배틀 중 상대와 HP 를 보면서 고르게).
+func _show_choice(opts: Array, caption := "", pokemon := 0) -> void:
 	choice_options = opts
+	rule_label.visible = caption != ""
+	rule_label.text = caption
+	if pokemon > 0:
+		_set_pokemon(stage, pokemon)
+		stage.show()
+	choice_box.position.y = CHOICE_Y_LOW if pokemon > 0 else CHOICE_Y
 	for i in choice_btns.size():
 		var b := choice_btns[i]
 		b.visible = i < opts.size()
@@ -489,6 +527,8 @@ func _apply(d: Dictionary) -> void:
 	if st.sena >= 2:
 		_unlock("same_month")
 	st.watch += d.get("watch", 0)
+	if d.get("heat", 0) != 0:
+		_add_heat(d.heat)
 	_refresh_bar()
 
 
@@ -545,7 +585,7 @@ func _show_crate() -> void:
 	item_label.visible = item_label.text != ""
 	return_btn.visible = c.has("owner") and _week() >= 2
 	return_btn.text = "주인에게 돌려보내기 (-%s원)" % _won(POSTAGE)
-	special_btn.visible = c.has("special")
+	special_btn.visible = c.has("special") and (not c.special.has("if") or _check(c.special["if"]))
 	if special_btn.visible:
 		special_btn.text = c.special.label
 	waiting = "work"
@@ -571,6 +611,10 @@ func _on_send() -> void:
 	else:
 		sent_today.append(c)
 		bonus_today += c.get("bonus", 0)
+		# 검수 기록에 내 이름이 남는다. 주인이 있는 녀석일수록 신고가 빨리 들어온다.
+		_add_heat(c.get("heat", HEAT_NAMED if c.get("named", false) else 0))
+	if c.has("sent_news"):
+		st.news.append(c.sent_news)
 	_leave_crate(Vector2(420, 0))
 
 
@@ -585,9 +629,12 @@ func _on_release() -> void:
 	if c.key == "eevee":
 		_unlock("ribbon")
 	if c.has("stray"):
-		st.meadow[c.key] = {"name": c.name if not c.has("reveal") else c.reveal.split("(")[0], "id": c.id, "days": c.stray, "fed": false}
+		st.meadow[c.key] = {"name": c.name if not c.has("reveal") else c.reveal.split("(")[0], "id": c.id, "days": c.stray, "bond": 0}
+	if c.has("rel_news"):
+		st.news.append(c.rel_news)
 	if not c.get("reject", false):
 		_add_susp(int(c.risk * days[int(st.day)].get("risk_mult", 1.0)))
+	_add_susp(c.get("rel_susp", 0))
 	_leave_crate(Vector2(-420, 0))
 
 
@@ -657,13 +704,14 @@ func _check(conds) -> bool:
 
 
 func _test(c: String) -> bool:
-	for pre in ["sent", "rel", "ret", "spc", "help", "item", "meadow"]:
+	for pre in ["sent", "rel", "ret", "spc", "help", "item", "meadow", "home"]:
 		if c.begins_with(pre + ":"):
 			var key := c.substr(pre.length() + 1)
 			match pre:
 				"help": return st.help.has(key)
 				"item": return st.items.has(key)
 				"meadow": return st.meadow.has(key)
+				"home": return st.home.has(key)
 				_: return st[pre].has(key)
 	for op in [">=", "=="]:
 		if op in c:
@@ -676,6 +724,8 @@ func _test(c: String) -> bool:
 			return not released_today.is_empty()
 		"pair_split":
 			return st.sent.has("nidoran_f") != st.sent.has("nidoran_m")
+	if c.begins_with("ending="):
+		return st.get("ending", "") == c.substr(7)
 	return st.flags.get(c, false)
 
 
@@ -689,12 +739,17 @@ func _value(name: String) -> int:
 		"watch": return int(st.watch)
 		"released": return int(st.released_total)
 		"returned": return st.ret.size()
+		"heat": return int(st.heat)
 		"week": return _week()
 	return 0
 
 
 func _week() -> int:
 	return int(st.day) / 6 + 1
+
+
+func _rent() -> int:
+	return RENTS[mini(_week(), RENTS.size()) - 1]
 
 
 # ── 만들어지는 단계들 ───────────────────────────────────
@@ -733,8 +788,9 @@ func _report_steps() -> Array:
 
 
 func _evening_steps() -> Array:
-	st.money -= LIVING
+	st.money -= LIVING + (MANKEY_COST if st.home.has("mankey_s") else 0)
 	st.susp = max(0, st.susp - SUSP_DECAY)
+	st.heat = max(0, st.heat - HEAT_DECAY)
 	_refresh_bar()
 	var home := "warehouse" if st.flags.get("live_warehouse", false) else "room"
 	var out := [{"t": "bg", "name": home}, {"t": "bgm", "name": "pallet"},
@@ -748,10 +804,13 @@ func _evening_steps() -> Array:
 		if not owned.is_empty():
 			out.append(_say(owned[int(st.day) % owned.size()].line))
 		var next := int(st.day) + 1
+		for k in st.home:
+			out.append(_say(Extra.HOME_LINES.get(k, "%s 방구석에서 자고 있다." % _josa(st.home[k].name, "이", "가"))).merged({"pokemon": int(st.home[k].id)}))
+			break
 		if st.items.has("radio") and next < days.size() and days[next].has("rule"):
 			out.append(_say("라디오 주파수를 돌리다 로켓단 무전이 잡혔다. '내일 지침: %s'" % days[next].rule))
 		if days[int(st.day)].name.ends_with("목요일") and _week() < 4:
-			out.append(_say("내일이 월세 갚는 날이다. 갚아야 할 돈은 %s원이다." % _won(RENT)))
+			out.append(_say("내일이 월세 갚는 날이다. 갚아야 할 돈은 %s원이다." % _won(_rent())))
 	return out
 
 
@@ -763,10 +822,19 @@ func _meadow_steps() -> Array:
 		_say("밤늦게 뒷문 풀밭에 들렀다. %s 아직 남아 있다." % _josa(", ".join(names), "이", "가")).merged({"pokemon": int(st.meadow.values()[0].id)})]
 	if st.meadow.size() >= 2:
 		out.append(_say("풀밭에 머무는 녀석이 늘수록 누군가 눈치챌 위험도 커진다."))
-	out.append({"t": "choice", "options": [
-		{"text": "먹이를 두고 온다 (-%s원)" % _won(FEED_COST), "call": "_feed_meadow"},
-		{"text": "그냥 돌아간다"},
-	]})
+	var opts := [{"text": "먹이를 두고 온다 (-%s원 · 모두 친밀도 +1)" % _won(FEED_COST), "call": "_feed_meadow"}]
+	for k in st.meadow:
+		var m: Dictionary = st.meadow[k]
+		if opts.size() >= 4:
+			break
+		if m.bond >= BOND_STAY and st.home.size() < HOME_MAX:
+			opts.append({"text": "%s 원룸에 데려간다" % _josa(m.name, "을", "를"), "call": "_adopt", "mkey": k})
+		else:
+			opts.append({"text": "%s 놀아 준다 (친밀도 %d → %d)" % [_josa(m.name, "과", "와"), m.bond, m.bond + 2], "call": "_play_meadow", "mkey": k})
+	if not st.flags.get("den", false):
+		opts.append({"text": "은신처를 만들어 준다 (-%s원 · 들킬 위험 절반)" % _won(DEN_COST), "call": "_build_den"})
+	opts.append({"text": "그냥 돌아간다"})
+	out.append({"t": "choice", "options": opts})
 	out.append({"t": "meadow_tick"})
 	return out
 
@@ -774,17 +842,56 @@ func _meadow_steps() -> Array:
 func _feed_meadow() -> Array:
 	st.money -= FEED_COST
 	for k in st.meadow:
-		st.meadow[k].fed = true
+		st.meadow[k].bond += 1
 		st.help[k] = true
 	_refresh_bar()
 	return [_say("먹이 그릇을 채워 두었다. 풀숲에서 조심스럽게 다가오는 소리가 났다.")]
 
 
+func _play_meadow() -> Array:
+	var k := _picked("mkey")
+	var m: Dictionary = st.meadow[k]
+	m.bond += 2
+	st.help[k] = true
+	_add_susp(PLAY_SUSP)
+	var line: String = Extra.MEADOW_PLAY.get(k, "%s 한참 뛰어놀았다. 돌아갈 때 녀석이 뒷문까지 따라 나왔다." % _josa(m.name, "과", "와"))
+	var out := [_say(line).merged({"pokemon": int(m.id)})]
+	if m.bond >= BOND_STAY:
+		out.append(_say("%s 이제 풀밭을 떠나지 않을 것 같다. 원룸에 데려갈 수도 있다." % _josa(m.name, "은", "는")))
+	return out
+
+
+func _build_den() -> Array:
+	st.money -= DEN_COST
+	st.flags["den"] = true
+	_refresh_bar()
+	return [_say("버려진 상자와 방수포로 풀숲 깊은 곳에 은신처를 만들었다. 이제 멀리서는 잘 보이지 않는다.")]
+
+
+func _adopt() -> Array:
+	var k := _picked("mkey")
+	var m: Dictionary = st.meadow[k]
+	st.home[k] = {"name": m.name, "id": m.id, "bond": m.bond}
+	st.meadow.erase(k)
+	st.help[k] = true
+	var where := "창고 다락" if st.flags.get("live_warehouse", false) else "원룸"
+	var out := [_say("%s 품에 안고 %s으로 돌아왔다. 녀석은 금방 구석 자리를 차지했다." % [_josa(m.name, "을", "를"), where]).merged({"pokemon": int(m.id)})]
+	if Extra.ADOPT.has(k):
+		out.append(_say(Extra.ADOPT[k]))
+	if k == "meowth_stray":
+		st.trust.meowth += 3
+	_unlock("adopted")
+	return out
+
+
 func _meadow_tick() -> Array:
 	var out := []
 	if st.meadow.size() >= 2:
-		_add_susp(MEADOW_SUSP * (st.meadow.size() - 1))
+		var n: int = MEADOW_SUSP * (st.meadow.size() - 1)
+		_add_susp(n / 2 if st.flags.get("den", false) else n)
 	for k in st.meadow.keys():
+		if st.meadow[k].bond >= BOND_STAY:
+			continue   # 친해진 녀석은 떠나지 않고 기다린다
 		st.meadow[k].days -= 1
 		if st.meadow[k].days <= 0:
 			out.append(_say(Extra.MEADOW_LEAVE.get(k, "%s 풀밭을 떠났다." % _josa(st.meadow[k].name, "이", "가"))))
@@ -792,16 +899,177 @@ func _meadow_tick() -> Array:
 	return out
 
 
+# ── 경찰 수사망 ──────────────────────────────────────────
+
+func _add_heat(n: int) -> void:
+	if n == 0:
+		return
+	if n > 0 and st.flags.get("rocket_owned", false):
+		n = maxi(1, n / 2)   # 본사 변호사가 절반은 막아 준다
+	st.heat = clampi(st.heat + n, 0, 150)
+	if n > 0:
+		heat_bar.modulate = Color(0.6, 0.8, 2)
+		create_tween().tween_property(heat_bar, "modulate", Color.WHITE, 0.5)
+
+
+## 아침마다 수사망이 얼마나 좁혀졌는지 보고 사건을 일으킨다.
+func _heat_steps() -> Array:
+	if st.heat >= HEAT_ARREST:
+		if st.home.has("abra") and not st.flags.get("abra_used", false):
+			st.flags["abra_used"] = true
+			st.heat = 70
+			return [
+				{"t": "title", "text": "새벽 · 수갑"},
+				_say("새벽 다섯 시, 원룸 문이 부서졌다. 경찰이 내 이름을 불렀다."),
+				_say("수갑이 손목에 닿는 순간 방구석에서 자던 캐이시가 눈을 떴다. 다음 순간 나는 상록숲 한가운데 서 있었다.").merged({"pokemon": 63}),
+				_say("캐이시는 하품을 한 번 하더니 다시 잠들었다. 이런 행운은 두 번 오지 않는다."),
+			]
+		return _cuffed_steps("새벽 다섯 시, 원룸 문이 부서졌다")
+	if st.heat >= HEAT_SEARCH and not st.flags.get("police_search", false):
+		st.flags["police_search"] = true
+		return _search_steps()
+	if st.heat >= HEAT_QUESTION and not st.flags.get("police_q1", false):
+		st.flags["police_q1"] = true
+		var out := [
+			{"t": "bg", "name": "warehouse"},
+			_say("출근길에 창고 앞에서 순경이 나를 불러 세웠다."),
+			_say("잠깐 이야기 좀 합시다. 요즘 포켓몬을 잃어버린 주인들이 하나같이 이 창고 이야기를 해요. 검수 기록에 당신 이름이 있다는 제보도 들어왔고요.", "officer"),
+		]
+		if st.flags.get("police_friend", false):
+			out.append(_say("순경 옆의 3호가 내 손을 핥았다. 순경은 한참 나를 보더니 수첩을 덮었다.").merged({"pokemon": 58}))
+			out.append({"t": "fx", "heat": -15})
+			return out
+		out.append({"t": "choice", "options": [
+			{"text": "아무것도 모른다고 잡아뗀다", "heat": 5, "flag": "q1_lie"},
+			{"text": "트럭이 오는 시간을 흘려준다 (정보원이 된다)", "heat": -25, "susp": 15, "watch": 1, "flag": "informant"},
+		]})
+		out.append(_say("다음에 또 봅시다. 그땐 수첩 말고 영장을 들고 올 수도 있어요.", "officer").merged({"if": "q1_lie"}))
+		out.append(_say("…좋아요. 당신 이름은 당분간 수첩에서 빼 두죠. 대신 약속은 지켜요.", "officer").merged({"if": "informant"}))
+		return out
+	return []
+
+
+func _search_steps() -> Array:
+	var out := [{"t": "title", "text": "가택 수색"},
+		_say("퇴근해서 돌아오니 경찰 둘이 원룸 문 앞에 서 있었다. 수색 영장이었다.")]
+	if st.home.is_empty():
+		out.append(_say("경찰은 한 시간 동안 방을 뒤졌지만 아무것도 찾지 못했다. 빈 몬스터볼 하나만 한참 들여다보다 내려놓았다."))
+		out.append({"t": "fx", "heat": -10})
+		return out
+	if st.home.has("ditto"):
+		out.append(_say("경찰이 방구석의 피카츄 인형을 집어 들었다가 내려놓았다. 인형이 아주 조금 흐물거렸다.").merged({"pokemon": 25}))
+		out.append(_say("메타몽은 다른 녀석들 위로 담요처럼 펼쳐져 인형 무더기인 척했다. 경찰은 빈손으로 돌아갔다."))
+		out.append({"t": "fx", "heat": -10})
+		return out
+	var names := PackedStringArray(st.home.values().map(func(m): return m.name))
+	out.append(_say("경찰은 방구석의 %s 금방 찾아냈다. 도난 신고 목록과 대조하는 데 오 분도 걸리지 않았다." % _josa(", ".join(names), "을", "를")))
+	out.append(_say("녀석들은 보호소로 옮겨졌다. 문을 나서면서 한 번씩 나를 돌아봤다."))
+	for k in st.home:
+		st.flags["seized_" + k] = true
+	st.home = {}
+	out.append({"t": "fx", "heat": 20, "flag": "search_found"})
+	return out
+
+
+func _cuffed_steps(where: String) -> Array:
+	return [
+		{"t": "title", "text": "수갑", "urgent": true},
+		_say("%s. 경찰이 내 이름을 불렀다. 검수 기록 맨 아래 서명란에 적힌 그 이름이었다." % where),
+		_say("본사로 보낸 포켓몬의 주인들이 차례로 증언했다. 이름표, 편지, 리본. 나는 그걸 다 읽고도 트럭에 실었다."),
+		{"t": "ending", "id": "cuffed"},
+		{"t": "epilogue"},
+		{"t": "end", "text": "엔딩: 수갑"},
+	]
+
+
+# ── 결말 뒤 동료들의 운명 ─────────────────────────────────
+
+## 결말(st.ending)과 쌓인 선택으로 로사 · 로이 · 세나 · 나옹의 운명을 하나씩 고른다.
+func _fates() -> Dictionary:
+	var e: String = st.get("ending", "")
+	var court: bool = (e == "records" or e == "deal") and not st.flags.get("wiped_all", false)
+	var f := {}
+	if e == "truck":
+		f.rosa = "trio_snow" if st.flags.get("showed_arbok", false) else "trio"
+	elif court and st.trust.rosa < 3:
+		f.rosa = "prison"
+	elif e == "rocket" and not st.flags.get("showed_arbok", false):
+		f.rosa = "rocket"
+	elif st.flags.get("showed_arbok", false):
+		f.rosa = "reunion"
+	elif st.flags.get("rosa_knows", false):
+		f.rosa = "search"
+	else:
+		f.rosa = "wander"
+	if st.flags.get("roy_gone", false):
+		f.roy = "wedding"
+	elif e == "truck":
+		f.roy = "taken" if st.flags.get("roy_left", false) else "trio"
+	elif court and st.trust.roy < 3:
+		f.roy = "prison"
+	elif st.sent.has("roy_dog"):
+		f.roy = "dog_search"
+	elif st.trust.roy < 3:
+		f.roy = "drifter"
+	elif st.rel.has("roy_dog"):
+		f.roy = "with_dog"
+	else:
+		f.roy = "home"
+	if st.flags.get("sena_dog_back", false) and st.sena >= 2:
+		f.sena = "free"
+	elif st.flags.get("sena_has_001", false) and st.sena >= 2:
+		f.sena = "returned"
+	elif court and st.sena < 2:
+		f.sena = "prison"
+	elif st.flags.get("arena_freed", false) and st.sena >= 1:
+		f.sena = "shelter"
+	elif st.sena >= 1:
+		f.sena = "quit"
+	else:
+		f.sena = "rocket"
+	if e == "truck":
+		f.meowth = "trio"
+	elif f.rosa == "reunion":
+		f.meowth = "snow"
+	elif st.home.has("meowth_stray") or st.flags.get("bought_meowzie", false) or st.rel.has("meowth_stray"):
+		f.meowth = "together"
+	else:
+		f.meowth = "alone"
+	return f
+
+
+func _fate_steps() -> Array:
+	var f := _fates()
+	st.fates = f
+	var out := [{"t": "title", "text": "그 뒤의 사람들"}]
+	for who in ["rosa", "roy", "sena", "meowth"]:
+		var line: Array = W4.FATES[who][f[who]]
+		out.append(_say(line[1], line[0]))
+	return out
+
+
+func _home_epilogue() -> Array:
+	var out := []
+	for k in st.home:
+		var line: String = Extra.HOME_EPILOGUE.get(k, "%s 끝까지 내 곁에 있었다." % _josa(st.home[k].name, "은", "는"))
+		if st.get("ending", "") == "cuffed":
+			line = "원룸에 있던 %s 보호소로 옮겨졌다. 면회 날마다 창살 너머로 나를 찾았다고 한다." % _josa(st.home[k].name, "은", "는")
+		out.append(_say(line).merged({"pokemon": int(st.home[k].id)}))
+	return out
+
+
 func _rent_steps() -> Array:
 	if st.flags.get("live_warehouse", false):
-		return [_say("창고에서 지내니 이번 주는 월세가 없다. 대신 등이 배긴다.")]
-	if st.money >= RENT:
-		st.money -= RENT
+		st.money -= WAREHOUSE_FEE
 		_refresh_bar()
-		return [_say("밀린 월세 %s원을 갚았다. 통장에는 %s원이 남았다." % [_won(RENT), _won(st.money)])]
+		return [_say("창고 다락 자릿세 %s원을 아폴로에게 냈다. 로켓단은 잠자리에도 돈을 받는다." % _won(WAREHOUSE_FEE))]
+	if st.money >= _rent():
+		st.money -= _rent()
+		_refresh_bar()
+		return [_say("밀린 월세 %s원을 갚았다. 통장에는 %s원이 남았다." % [_won(_rent()), _won(st.money)])]
 	var loyal: bool = not st.flags.get("reported_roy", false) and not st.flags.get("rosa_knows", false)
-	if loyal and st.money >= RENT - SENIOR_HELP:
-		var gap: int = RENT - st.money
+	if loyal and st.money >= _rent() - SENIOR_HELP:
+		var gap: int = _rent() - st.money
 		st.money = 0
 		_refresh_bar()
 		return [
@@ -822,6 +1090,8 @@ func _rent_steps() -> Array:
 		{"t": "title", "text": "금요일 밤 · 짐 싸기"},
 		_say("월세를 갚지 못했다. 집주인은 내일 아침까지 방을 비우라고 했다."),
 		_say("가방을 들고 창고까지 걸어갔지만 문이 잠겨 있었다. 로사는 전화를 받지 않았다."),
+		{"t": "ending", "id": "locked"},
+		{"t": "epilogue"},
 		{"t": "end", "text": "엔딩: 잠긴 창고"},
 	]
 
@@ -960,6 +1230,8 @@ func _fired_steps() -> Array:
 		_say("뒷문 밖 풀밭이 포켓몬 놀이터가 됐더군. 오늘부로 너는 로켓단원이 아니다.", "apollo"),
 		_say("유니폼을 반납하고 창고를 나왔다. 풀밭 쪽에서 낯익은 울음소리가 몇 번 들렸다."),
 		_say("월세는 여전히 밀려 있다. 그래도 발걸음은 생각보다 가벼웠다."),
+		{"t": "ending", "id": "fired"},
+		{"t": "epilogue"},
 		{"t": "end", "text": "엔딩: 뒷문으로 나간 사람"},
 	]
 
@@ -983,6 +1255,7 @@ func _refresh_bar() -> void:
 	rent_label.text = "월세 D-%d" % left if left > 0 else "월세 오늘"
 	rent_label.visible = int(st.day) % 6 < 5 and _week() < 4 and not st.flags.get("live_warehouse", false)
 	susp_bar.value = st.susp
+	heat_bar.value = st.heat
 
 
 func _won(n: int) -> String:
@@ -1000,3 +1273,85 @@ func _josa(word: String, with_b: String, without_b: String) -> String:
 	if code >= 0xAC00 and code <= 0xD7A3 and (code - 0xAC00) % 28 != 0:
 		return word + with_b
 	return word + without_b
+
+
+# ── 포켓몬 배틀 ───────────────────────────────────────────
+## {"t": "battle", "enemy": 번호, "ename": "경비원의 아보크", "ehp": 12, "eatk": [1, 3], "flag": "이기면 켜질 플래그"}
+## 내 쪽은 원룸에 데려온 첫 포켓몬(친밀도만큼 튼튼하다), 없으면 로켓단 지급 꼬렛.
+
+var battle := {}
+
+
+func _battle_start(s: Dictionary) -> void:
+	var mine := {"name": "로켓단 지급 꼬렛", "id": 19, "hp": 9, "atk": [1, 3]}
+	if not st.home.is_empty():
+		var k: String = st.home.keys()[0]
+		var m: Dictionary = st.home[k]
+		var bond: int = mini(int(m.get("bond", 3)), 6)
+		mine = {"name": m.name, "id": int(m.id), "hp": 8 + bond * 2, "atk": [2, 3 + bond / 3]}
+	mine.max = mine.hp
+	battle = {
+		"me": mine, "charged": false,
+		"foe": {"name": s.ename, "id": s.enemy, "hp": s.ehp, "max": s.ehp, "atk": s.eatk}, "foe_charged": false,
+		"flag": s.flag, "log": [],
+	}
+
+
+func _battle_status() -> String:
+	var me: Dictionary = battle.me
+	var foe: Dictionary = battle.foe
+	return "내 %s HP %d/%d   ·   %s HP %d/%d" % [me.name, me.hp, me.max, foe.name, foe.hp, foe.max]
+
+
+func _battle_menu() -> Array:
+	var foe: Dictionary = battle.foe
+	return [
+		{"t": "choice", "caption": _battle_status(), "pokemon": int(foe.id), "options": [
+			{"text": "몸통박치기", "call": "_battle_act", "act": "hit"},
+			{"text": "기 모으기 (다음 공격 두 배)", "call": "_battle_act", "act": "charge"},
+			{"text": "웅크리기 (받는 피해 줄이기)", "call": "_battle_act", "act": "guard"},
+		]},
+	]
+
+
+func _battle_act() -> Array:
+	var act := _picked("act")
+	var me: Dictionary = battle.me
+	var foe: Dictionary = battle.foe
+	var out := []
+	match act:
+		"hit":
+			var dmg := randi_range(me.atk[0], me.atk[1]) * (2 if battle.charged else 1)
+			battle.charged = false
+			foe.hp = maxi(0, foe.hp - dmg)
+			out.append(_say("%s의 몸통박치기! %s에게 %d만큼 먹혔다." % [me.name, foe.name, dmg]).merged({"pokemon": int(me.id)}))
+		"charge":
+			battle.charged = true
+			out.append(_say("%s 숨을 고르며 힘을 모은다." % _josa(me.name, "이", "가")).merged({"pokemon": int(me.id)}))
+		"guard":
+			out.append(_say("%s 몸을 잔뜩 웅크렸다." % _josa(me.name, "이", "가")).merged({"pokemon": int(me.id)}))
+	if foe.hp > 0:
+		if not battle.foe_charged and randf() < 0.25:
+			battle.foe_charged = true
+			out.append(_say("%s 무언가를 노리고 있다…." % _josa(foe.name, "이", "가")).merged({"pokemon": int(foe.id)}))
+		else:
+			var dmg := randi_range(foe.atk[0], foe.atk[1]) * (2 if battle.foe_charged else 1)
+			battle.foe_charged = false
+			if act == "guard":
+				dmg = maxi(0, dmg / 3)
+			me.hp = maxi(0, me.hp - dmg)
+			out.append(_say("%s의 공격! %s %d만큼 다쳤다." % [foe.name, _josa(me.name, "이", "가"), dmg]).merged({"pokemon": int(foe.id)}))
+	out.append({"t": "battle_next"})
+	return out
+
+
+func _battle_next() -> Array:
+	var me: Dictionary = battle.me
+	var foe: Dictionary = battle.foe
+	if foe.hp <= 0:
+		st.flags[battle.flag] = true
+		_unlock("battle_win")
+		return [_say("%s 쓰러졌다. 이겼다!" % _josa(foe.name, "이", "가")).merged({"pokemon": int(me.id)})]
+	if me.hp <= 0:
+		return [_say("%s 쓰러졌다. 졌다…." % _josa(me.name, "이", "가")).merged({"pokemon": int(foe.id)})]
+	return _battle_menu()

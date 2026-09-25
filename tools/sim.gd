@@ -4,9 +4,10 @@ extends SceneTree
 ## 결말 번호: 마지막 금요일 선택지 중 몇 번째를 고를지 (0부터). 없으면 전략대로.
 ## 대사 전체와 날마다의 돈·의심도, 마지막 결말을 찍는다.
 
-const KIND := ["못 본 척", "대신 서명", "솔직하게", "모른다고 한다", "먹이를", "내가 했다", "받을 자격", "선배들과 마지막", "혼자 조용히",
+const KIND := ["못 본 척", "대신 서명", "솔직하게", "모른다고 한다", "데려간다", "놀아 준다", "먹이를", "내가 했다", "받을 자격", "선배들과 마지막", "혼자 조용히",
+	"사양한다", "철창 문", "본사 연구동", "로사와 로이", "같이 가겠다", "빼돌린다", "달아 준다", "보태 준다", "알려 준다", "둘러댄다", "사과한다", "흘려준다",
 	"포장마차", "상록숲", "게임코너", "돌려보낸", "버터플", "나옹 (", "식스테일", "그만하고", "그냥 나간다", "화분"]
-const EVIL := ["알린다", "말한다", "10,000", "사례금", "받는다", "아폴로를 따라", "잡아뗀다", "가만히", "그냥 돌아간다",
+const EVIL := ["알린다", "말한다", "10,000", "사례금", "받아들인다", "받는다", "아폴로를 따라", "잡아뗀다", "가만히", "그냥 돌아간다", "거절한다", "상자만",
 	"백화점", "게임코너", "그만하고", "아무것도"]
 
 var strategy := "kind"
@@ -26,11 +27,12 @@ func _initialize() -> void:
 	await process_frame
 	var guard := 0
 	var last_day := -1
+	Engine.time_scale = 50.0
 	while m.waiting != "end" and guard < 20000:
 		guard += 1
 		if not m.st.is_empty() and m.st.day != last_day:
 			last_day = m.st.day
-			print("=== %s  돈 %d  의심도 %d  신뢰 %s  세나 %d" % [m.days[m.st.day].name, m.st.money, m.st.susp, m.st.trust, m.st.sena])
+			print("=== %s  돈 %d  의심도 %d  수사망 %d  신뢰 %s  세나 %d  풀밭 %s  원룸 %s" % [m.days[m.st.day].name, m.st.money, m.st.susp, m.st.heat, m.st.trust, m.st.sena, m.st.meadow.keys(), m.st.home.keys()])
 		match m.waiting:
 			"title":
 				print("## ", m.title_label.text)
@@ -53,6 +55,7 @@ func _initialize() -> void:
 	print("## ", m.title_label.text, "   돈 %d  풀어준 수 %d  돌려보낸 수 %d  의심도 %d" % [m.st.money, m.st.released_total, m.st.ret.size(), m.st.susp])
 	print("FLAGS ", m.st.flags.keys())
 	print("ACH ", m.achieved.keys())
+	print("FATES ", m.st.get("ending"), " ", m.st.get("fates"))
 	quit()
 
 

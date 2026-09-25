@@ -21,36 +21,50 @@
 | `id` | 도감 번호. 움직이는 그림은 `assets/pokemon_anim/`, 없으면 정지 그림 |
 | `name` · `memo` · `item` | 이름 · 수거 메모 · 딸려 온 것 |
 | `risk` | 풀어줄 때 오르는 의심도. 돌려보내면 절반 |
-| `named` | 사연 있는 녀석. 풀어준 날 저녁 가로등 아래 그림자로 나온다 |
+| `named` | 사연 있는 녀석. 풀어준 날 저녁 가로등 아래 그림자로 나온다. 본사로 보내면 경찰 수사망이 오른다 |
+| `heat` | 본사로 보냈을 때 오르는 경찰 수사망 (없으면 사연 있는 녀석은 8, 나머지는 0) |
+| `sent_news` · `rel_news` | 보냈을 때 · 풀어줬을 때 다음 날 아침 신문 |
+| `rel_susp` | 풀어줄 때 따로 더 오르는 의심도 (붐볼처럼 터지는 녀석) |
 | `reject` · `reveal` | 보내면 반품(벌금). 풀어줘도 의심받지 않는다 · 반품될 때 밝혀지는 이름 |
 | `wanted` | 수배 개체. 트럭에 안 실으면 벌금 2,000원 |
 | `owner` · `ret_news` | 2주차부터 주인에게 돌려보낼 수 있다 · 다음 날 아침 신문 |
-| `stray` | 풀어주면 뒷문 풀밭에 이 밤 수만큼 머문다. 먹이를 주면 `help:키`가 켜진다 |
+| `stray` | 풀어주면 뒷문 풀밭에 이 밤 수만큼 머문다. 먹이를 주거나 놀아 주면 `help:키`가 켜지고, 친밀도가 3이 되면 떠나지 않고 원룸에 데려갈 수 있다(`home:키`) |
 | `bonus` | 보냈을 때 특별 수당 |
 | `if` | 조건이 맞을 때만 들어온다 |
 | `intro` | 상자를 열기 전에 나오는 단계들 (무대에 그 포켓몬이 선다) |
-| `special` | 네 번째 버튼. `label`, `flag`, `no_fine`(수배 벌금 면제), `steps` |
+| `special` | 네 번째 버튼. `label`, `if`(버튼이 보일 조건), `flag`, `no_fine`(수배 벌금 면제), `steps` |
 
 ## 단계 (`t`)
 | t | 뜻 |
 |---|---|
 | `title` | 가운데 큰 제목 |
 | `say` | 대사. `who`는 `extra.gd`의 `PEOPLE` 키. `shake`는 흔들림, `pokemon`은 무대에 세울 포켓몬 번호 |
-| `fx` | `money` · `susp` · `flag` · `trust`(`{"rosa": 1}`) · `sena` · `watch` |
+| `fx` | `money` · `susp` · `heat` · `flag` · `trust`(`{"rosa": 1}`) · `sena` · `watch` |
 | `choice` | `options`: `text`, `if`, 효과(fx와 같은 키), `steps`(고르면 이어지는 단계) |
 | `work` | 그날 상자 검수 |
 | `report` · `evening` · `rent` · `news` | 일당 · 저녁(생활비, 원룸 물건, 라디오, 뒷문 풀밭) · 금요일 월세 · 전날 돌려보낸 소식 |
 | `free` | 토요일 장소 고르기 (`extra.gd`의 `PLACES`) |
 | `slots` · `prizes` · `shop` · `visits` | 게임코너 슬롯 · 경품 교환 · 백화점 · 돌려보낸 집 찾아가기 |
 | `bg` · `bgm` | `assets/bg/이름.png` · `assets/music/이름.mp3` |
-| `epilogue` | 4주차 `EPILOGUE` (한 달 뒤 신문) |
+| `battle` | 포켓몬 배틀. `enemy`(번호) · `ename` · `ehp` · `eatk`([최소, 최대]) · `flag`(이기면 켜짐). 내 쪽은 원룸의 첫 포켓몬, 없으면 로켓단 지급 꼬렛 |
+| `ach` | 도전 과제 달성 (`id`) |
+| `ending` | 결말 종류를 정한다 (`id`: rocket · records · deal · truck · first · turn · empty · cuffed · fired · locked). 동료 운명이 이걸 보고 갈린다 |
+| `epilogue` | 동료 운명(`FATES`) → 한 달 뒤 신문(`EPILOGUE`) → 원룸 식구의 뒷이야기 |
 | `end` | 결말 제목을 띄우고 끝낸다 |
 
 모든 단계와 선택지에 `"if"`를 붙일 수 있다.
 
 ## 조건
 - 플래그 이름: `covered_roy`, `showed_arbok`, `roy_gone`, `bought_butterfree`, …
-- `sent:키` · `rel:키` · `ret:키` · `spc:키` · `help:키` · `item:키` · `meadow:키`
-- `trust:rosa>=3` · `sena>=2` · `watch>=1` · `susp>=40` · `money>=5000` · `released>=5` · `returned>=1` · `week==2` · `week>=3`
+- `sent:키` · `rel:키` · `ret:키` · `spc:키` · `help:키` · `item:키` · `meadow:키` · `home:키`
+- `trust:rosa>=3` · `sena>=2` · `watch>=1` · `susp>=40` · `heat>=45` · `money>=5000` · `released>=5` · `returned>=1` · `week==2` · `week>=3`
+- `ending=truck` (정해진 결말 종류)
 - `rel_today` (오늘 풀어준 게 있음) · `pair_split` (니드런 둘 중 하나만 보냄)
 - 앞에 `!`를 붙이면 반대. 배열로 주면 전부 맞아야 한다.
+
+## 경찰 수사망 (main.gd)
+사연 있는 녀석을 본사로 보내면 오르고 밤마다 3씩 내린다. 아침마다 확인한다.
+- 35 이상: 참고인 조사 (잡아떼기 / 정보원이 되기). 경찰견 3호를 풀어줬다면 순경이 봐준다
+- 65 이상: 가택 수색. 원룸의 포켓몬이 증거가 된다 (메타몽이 있으면 인형인 척해 준다)
+- 100 이상: 체포 (원룸에 캐이시가 있으면 한 번 순간이동으로 빠져나간다)
+- 로켓단의 목줄(`rocket_owned`): 2 · 3주차 월요일 아폴로의 제안. 받으면 수사망이 절반만 오르지만 결말이 로켓단 쪽으로 묶인다
