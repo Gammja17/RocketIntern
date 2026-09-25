@@ -976,7 +976,7 @@ func _refresh_bar() -> void:
 	quota_label.visible = info.get("quota", 0) > 0
 	var left := 4 - int(st.day) % 6
 	rent_label.text = "월세 D-%d" % left if left > 0 else "월세 오늘"
-	rent_label.visible = int(st.day) % 6 < 5 and not st.flags.get("live_warehouse", false)
+	rent_label.visible = int(st.day) % 6 < 5 and _week() < 4 and not st.flags.get("live_warehouse", false)
 	susp_bar.value = st.susp
 
 
