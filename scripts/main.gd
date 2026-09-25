@@ -60,6 +60,7 @@ const PORTRAIT := {
 	"RestartBtn": Rect2(170, 760, 200, 56),
 	"ToastPanel": Rect2(150, 90, 382, 70),
 	"AchPanel": Rect2(12, 60, 516, 880),
+	"TitleArt": Rect2(180, 20, 180, 170),
 	"SettingsLayer/SettingsPanel": Rect2(20, 160, 500, 520),
 }
 
@@ -86,7 +87,7 @@ const TRIO_TEX := preload("res://assets/trainers/teamrocket.png")
 @onready var return_btn: Button = %ReturnBtn
 @onready var special_btn: Button = %SpecialBtn
 @onready var docs_panel: Control = %DocsPanel
-@onready var docs_label: Label = %DocsLabel
+@onready var docs_label: RichTextLabel = %DocsLabel
 @onready var dialog_panel: Control = %DialogPanel
 @onready var portrait: TextureRect = %Portrait
 @onready var speaker_label: Label = %SpeakerLabel
@@ -154,6 +155,9 @@ func _ready() -> void:
 	get_window().size_changed.connect(_apply_layout)
 	_apply_layout()
 	_setup_settings()
+	var blink := create_tween().set_loops()   # 대화창의 ▼ 가 깜빡인다
+	blink.tween_property(%HintLabel, "modulate:a", 0.15, 0.5)
+	blink.tween_property(%HintLabel, "modulate:a", 1.0, 0.5)
 	_web_restore()
 	if FileAccess.file_exists(ACH_PATH):
 		var af := FileAccess.open(ACH_PATH, FileAccess.READ)
@@ -216,6 +220,7 @@ func _title_menu() -> void:
 	_play_bgm("hideout")
 	title_label.text = "로켓단 신입사원"
 	title_label.show()
+	%TitleArt.show()
 	if _storage_fragile():
 		rule_label.text = "이 브라우저에서는 저장이 지워질 수 있어요. 설정에서 저장 코드를 복사해 두세요."
 		rule_label.show()
@@ -470,17 +475,23 @@ func _randomize_wild(d: int) -> void:
 
 
 func _hide_all() -> void:
-	for n in [work_panel, docs_panel, dialog_panel, choice_box, title_label, restart_btn, rule_label, stage]:
+	for n in [work_panel, docs_panel, dialog_panel, choice_box, title_label, restart_btn, rule_label, stage, %TitleArt]:
 		n.hide()
 	anims.erase(crate_sprite)
 	waiting = ""
 
 
+var title_seq := 0
+
 func _show_title(text: String) -> void:
 	waiting = "anim"
+	title_seq += 1
+	var seq := title_seq
 	var tw := create_tween()
 	tw.tween_property(fader, "modulate:a", 1.0, 0.35)
 	await tw.finished
+	if seq != title_seq or waiting != "anim":
+		return   # 그 사이 다른 장면으로 넘어갔다
 	title_label.text = text
 	title_label.show()
 	waiting = "title"   # 제목이 뜨면 바로 넘길 수 있다
@@ -704,7 +715,7 @@ func _show_crate() -> void:
 	docs_panel.show()
 	rule_label.text = info.get("rule", "")
 	rule_label.show()
-	docs_label.text = "\n\n".join(PackedStringArray(_docs().map(func(d): return tr(d))))
+	docs_label.text = "\n\n".join(PackedStringArray(_docs().map(_doc_bbcode)))
 	crate_label.text = tr("상자 %d / %d") % [crate_i + 1, crates.size()]
 	_set_pokemon(crate_sprite, c.id)
 	_play_cry(c.id)
@@ -723,6 +734,15 @@ func _show_crate() -> void:
 	if special_btn.visible:
 		special_btn.text = c.special.label
 	waiting = "work"
+
+
+## 서류철 한 줄: 수배는 빨강, 실종 전단은 파랑, 회수 완료는 회색.
+func _doc_bbcode(key: String) -> String:
+	var text := tr(key).replace("[", "[lb]")
+	for pair in [["[본사 수배]", "#9c1b22"], ["[수배]", "#9c1b22"], ["[실종 전단]", "#1f4e8f"], ["[회수 완료]", "#6b6b6b"], ["[본사 특별 의뢰]", "#7a4a00"]]:
+		if key.begins_with(pair[0]):
+			return "[color=%s]%s[/color]" % [pair[1], text]
+	return text
 
 
 func _docs() -> Array:
@@ -1397,6 +1417,8 @@ func _refresh_bar() -> void:
 	rent_label.visible = int(st.day) % 6 < 5 and _week() < 4 and not st.flags.get("live_warehouse", false)
 	susp_bar.value = st.susp
 	heat_bar.value = st.heat
+	_danger(susp_bar, st.susp >= 70)
+	_danger(heat_bar, st.heat >= HEAT_SEARCH - 5)
 
 
 func _won(n: int) -> String:
@@ -1745,3 +1767,17 @@ func _load_save_code() -> void:
 		return
 	_web_backup()
 	get_tree().reload_current_scene()
+
+
+## 게이지가 위험 구간에 들어가면 깜빡인다.
+var danger_tweens := {}
+func _danger(bar: Control, on: bool) -> void:
+	if on and not danger_tweens.has(bar):
+		var tw := create_tween().set_loops()
+		tw.tween_property(bar, "self_modulate", Color(1.8, 1.8, 1.8), 0.35)
+		tw.tween_property(bar, "self_modulate", Color.WHITE, 0.35)
+		danger_tweens[bar] = tw
+	elif not on and danger_tweens.has(bar):
+		danger_tweens[bar].kill()
+		danger_tweens.erase(bar)
+		bar.self_modulate = Color.WHITE
