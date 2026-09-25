@@ -39,8 +39,22 @@ const HEAT_ARREST := 100    # 체포
 const FIRE_AT := 100
 const LAST_WARNING_FINE := 5000
 const TYPE_SPEED := 0.025   # 글자 하나당 초
-const CHOICE_Y := 230.0     # 선택지 위치. 무대에 포켓몬이 서 있으면 그 아래로 내린다
-const CHOICE_Y_LOW := 350.0
+const CHOICE_Y := [230.0, 430.0]      # 선택지 위치 [가로, 세로]. 무대에 포켓몬이 서 있으면 그 아래로 내린다
+const CHOICE_Y_LOW := [350.0, 560.0]
+## 폰을 세로로 들면 540x960 화면에 이 배치를 쓴다. 가로 배치는 씬에 있는 그대로.
+const PORTRAIT := {
+	"TopBarBg": Rect2(0, 0, 540, 0),
+	"RuleLabel": Rect2(12, 84, 516, 60),
+	"Stage": Rect2(120, 190, 300, 300),
+	"WorkPanel": Rect2(8, 132, 524, 470),
+	"DocsPanel": Rect2(8, 610, 524, 340),
+	"DialogPanel": Rect2(8, 680, 524, 272),
+	"ChoiceBox": Rect2(20, 430, 500, 480),
+	"TitleLabel": Rect2(0, 200, 540, 130),
+	"RestartBtn": Rect2(170, 760, 200, 56),
+	"ToastPanel": Rect2(150, 90, 382, 70),
+	"AchPanel": Rect2(12, 60, 516, 880),
+}
 
 const TRIO_TEX := preload("res://assets/trainers/teamrocket.png")
 
@@ -108,6 +122,8 @@ var last_pick := 0
 var base_pos := {}  # 흔들림 · 튀어 오르기 뒤 돌아갈 자리
 var achieved := {}
 var toast_tween: Tween
+var landscape := {}   # 씬에 있는 가로 배치
+var is_portrait := false
 
 
 func _ready() -> void:
@@ -120,8 +136,11 @@ func _ready() -> void:
 	return_btn.pressed.connect(_on_return)
 	special_btn.pressed.connect(_on_special)
 	restart_btn.pressed.connect(func(): get_tree().reload_current_scene())
-	for n in [stage, dialog_panel, crate_sprite]:
-		base_pos[n] = n.position
+	for n in PORTRAIT:
+		var c: Control = get_node(n)
+		landscape[n] = Rect2(c.position, c.size)
+	get_window().size_changed.connect(_apply_layout)
+	_apply_layout()
 	if FileAccess.file_exists(ACH_PATH):
 		var af := FileAccess.open(ACH_PATH, FileAccess.READ)
 		var parsed = JSON.parse_string(af.get_as_text()) if af else null
@@ -132,6 +151,20 @@ func _ready() -> void:
 			JavaScriptBridge.eval("window.SKEAM && SKEAM.unlock('%s')" % id)
 	%AchClose.pressed.connect(func(): ach_panel.hide(); _title_menu())
 	_title_menu()
+
+
+## 창(폰 화면)이 세로면 540x960 세로 배치, 가로면 960x540 가로 배치.
+func _apply_layout() -> void:
+	var ws := get_window().size
+	is_portrait = ws.y > ws.x
+	get_window().content_scale_size = Vector2i(540, 960) if is_portrait else Vector2i(960, 540)
+	for n in PORTRAIT:
+		var c: Control = get_node(n)
+		var r: Rect2 = PORTRAIT[n] if is_portrait else landscape[n]
+		c.position = r.position
+		c.size = r.size
+	for n in [stage, dialog_panel, crate_sprite]:
+		base_pos[n] = n.position
 
 
 func _process(delta: float) -> void:
@@ -507,7 +540,8 @@ func _show_choice(opts: Array, caption := "", pokemon := 0) -> void:
 	if pokemon > 0:
 		_set_pokemon(stage, pokemon)
 		stage.show()
-	choice_box.position.y = CHOICE_Y_LOW if pokemon > 0 else CHOICE_Y
+	var o := 1 if is_portrait else 0
+	choice_box.position.y = CHOICE_Y_LOW[o] if pokemon > 0 else CHOICE_Y[o]
 	for i in choice_btns.size():
 		var b := choice_btns[i]
 		b.visible = i < opts.size()

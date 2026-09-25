@@ -106,21 +106,17 @@ offset_bottom = 40.0
 mouse_filter = 2
 theme_override_styles/panel = SubResource("topbar")
 
-[node name="TopBar" type="HBoxContainer" parent="TopBarBg"]
+[node name="TopBar" type="HFlowContainer" parent="TopBarBg"]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 14
+theme_override_constants/h_separation = 14
+theme_override_constants/v_separation = 0
 
 [node name="DayLabel" type="Label" parent="TopBarBg/TopBar"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.82, 0.35, 1)
-
-[node name="Spacer" type="Control" parent="TopBarBg/TopBar"]
-layout_mode = 2
-size_flags_horizontal = 3
-mouse_filter = 2
 
 [node name="MoneyLabel" type="Label" parent="TopBarBg/TopBar"]
 unique_name_in_owner = true
@@ -241,14 +237,14 @@ layout_mode = 2
 
 [node name="MemoLabel" type="Label" parent="WorkPanel/VBox/HBox/Info"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(380, 0)
+custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 autowrap_mode = 3
 
 [node name="ItemLabel" type="Label" parent="WorkPanel/VBox/HBox/Info"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(380, 0)
+custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.72, 0.72, 1)
 theme_override_font_sizes/font_size = 18
@@ -263,28 +259,32 @@ columns = 2
 
 [node name="SendBtn" type="Button" parent="WorkPanel/VBox/Buttons"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(270, 44)
+custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 18
 text = "본사 트럭에 싣기"
 
 [node name="ReleaseBtn" type="Button" parent="WorkPanel/VBox/Buttons"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(270, 44)
+custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 18
 text = "뒷문으로 풀어주기"
 
 [node name="ReturnBtn" type="Button" parent="WorkPanel/VBox/Buttons"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(270, 44)
+custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 18
 
 [node name="SpecialBtn" type="Button" parent="WorkPanel/VBox/Buttons"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(270, 44)
+custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 18
 
 [node name="DocsPanel" type="PanelContainer" parent="."]
@@ -309,7 +309,7 @@ text = "서류철"
 
 [node name="DocsLabel" type="Label" parent="DocsPanel/VBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(300, 0)
+custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.15, 0.12, 0.1, 1)
 theme_override_font_sizes/font_size = 18
@@ -373,27 +373,27 @@ mouse_filter = 2
 theme_override_constants/separation = 8
 
 [node name="Choice0" type="Button" parent="ChoiceBox"]
-custom_minimum_size = Vector2(0, 42)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 
 [node name="Choice1" type="Button" parent="ChoiceBox"]
-custom_minimum_size = Vector2(0, 42)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 
 [node name="Choice2" type="Button" parent="ChoiceBox"]
-custom_minimum_size = Vector2(0, 42)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 
 [node name="Choice3" type="Button" parent="ChoiceBox"]
-custom_minimum_size = Vector2(0, 42)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 
 [node name="Choice4" type="Button" parent="ChoiceBox"]
-custom_minimum_size = Vector2(0, 42)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 
 [node name="Choice5" type="Button" parent="ChoiceBox"]
-custom_minimum_size = Vector2(0, 42)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 
 [node name="TitleLabel" type="Label" parent="."]
@@ -462,7 +462,7 @@ horizontal_scroll_mode = 0
 
 [node name="AchLabel" type="Label" parent="AchPanel/VBox/Scroll"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(660, 0)
+custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 18
