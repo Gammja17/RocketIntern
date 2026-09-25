@@ -89,7 +89,7 @@ func _pick(m, opts: Array) -> int:
 	if texts[0].begins_with("레버를"):
 		return 0 if rng.randf() < 0.3 else texts.size() - 1
 	if texts[0].begins_with("몸통박치기"):
-		return rng.randi_range(0, 2)
+		return rng.randi_range(0, texts.size() - 1)
 	# 풀밭: 성향에 따라 먹이 · 놀기 · 입양
 	if texts[0].begins_with("먹이를"):
 		for i in texts.size():

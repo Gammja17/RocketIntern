@@ -165,6 +165,14 @@ const DAYS := [
 			{"t": "work"},
 			{"t": "say", "who": "narr", "if": "sent:arbok", "text": "M-04는 수배 목록대로 본사 트럭에 실려 갔다. 로사는 오후 내내 다른 줄에서 일하고 있었다."},
 			{"t": "say", "who": "narr", "if": "rel:arbok", "text": "M-04는 뒷문으로 내보냈다. 녀석은 로사가 일하는 쪽을 한 번 돌아보고는 북쪽으로 기어갔다."},
+			{"t": "say", "who": "narr", "text": "퇴근 무렵, 세나가 창고 구석에서 전화를 붙들고 한참 서 있었다."},
+			{"t": "say", "who": "sena", "text": "…사채업자가 엄마 가게에 찾아왔대. 이번 주 안에 이자 3,000원을 못 내면 가게 유리를 다 깨 버리겠대."},
+			{"t": "choice", "options": [
+				{"text": "3,000원을 빌려준다", "money": -3000, "sena": 2, "flag": "lent_sena"},
+				{"text": "나도 월세가 급하다고 한다"},
+			]},
+			{"t": "say", "who": "sena", "if": "lent_sena", "text": "…꼭 갚을게. 다음 주 금요일에. 약속해."},
+			{"t": "say", "who": "sena", "if": "!lent_sena", "text": "알아. 다들 그렇지. 괜히 말했다."},
 			{"t": "report"},
 			{"t": "evening"},
 		],
@@ -216,7 +224,7 @@ const DAYS := [
 			{"t": "choice", "if": ["sent:eevee", "!ret:vaporeon"], "options": [{"text": "전단을 받고 그냥 지나간다"}, {"text": "고개를 돌리고 서둘러 지나간다", "heat": 5, "flag": "hana_saw"}, {"text": "솜이가 로켓단 창고를 거쳐 갔다고 알려 준다", "heat": 12, "flag": "told_hana"}]},
 			{"t": "say", "who": "hana", "if": "told_hana", "text": "로켓단…? 고맙습니다! 경찰 아저씨한테 바로 말할게요!"},
 			{"t": "say", "who": "narr", "if": "told_hana", "text": "아이는 전단 뭉치를 끌어안고 경찰서 쪽으로 뛰어갔다. 내 얼굴을 한참 쳐다본 뒤였다."},
-			{"t": "say", "who": "narr", "if": "hana_saw", "text": "등 뒤에서 아이가 \"아저씨!\" 하고 부르는 소리가 들렸다. 돌아보지 않았다."},
+			{"t": "say", "who": "narr", "if": "hana_saw", "text": "등 뒤에서 아이가 \"저기요!\" 하고 부르는 소리가 들렸다. 돌아보지 않았다."},
 
 			{"t": "free"},
 			{"t": "free"},

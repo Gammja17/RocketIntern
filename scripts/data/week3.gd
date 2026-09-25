@@ -39,6 +39,13 @@ const DAYS := [
 			{"t": "say", "who": "rosa", "if": ["sent:arbok", "!rosa_cold"], "text": "…사과는 받을게. 용서는 나중에 생각해 볼게."},
 			{"t": "say", "who": "rosa", "if": "rosa_cold", "text": "그래. 넌 시키는 대로 했지. 나도 15년 동안 그랬어. 그래서 더 화가 나."},
 
+			{"t": "say", "who": "sena", "text": "…나 오늘 오후에 병원 가 봐야 해. 아빠가 사채업자한테 맞고 실려 갔대."},
+			{"t": "say", "who": "sena", "text": "내 몫 검수까지 네가 해 줄 수 있어? 아폴로 간부님한테 들키면 둘 다 혼나겠지만."},
+			{"t": "choice", "options": [
+				{"text": "해 준다 (할당량 +1, 의심도 +10)", "quota": 1, "susp": 10, "sena": 1, "flag": "covered_sena"},
+				{"text": "오늘은 나도 버겁다고 한다", "sena": -1},
+			]},
+			{"t": "say", "who": "sena", "if": "covered_sena", "text": "고마워. 이 빚까지 합쳐서 꼭 갚을게."},
 			{"t": "say", "who": "narr", "text": "점심 무렵, 창고 앞에 검은 고급차 한 대가 섰다. 창고랑은 전혀 어울리지 않는 차였다."},
 			{"t": "say", "who": "butler", "text": "실례합니다. 저는 상록시티 외곽 저택의 집사입니다. 저희 로이 도련님을 찾고 있습니다."},
 			{"t": "say", "who": "bella", "text": "약혼식 날 도망친 사람이에요. 벌써 3년이나 됐죠. 이 근처에서 로켓단 옷을 입고 다닌다는 소문을 들었어요."},
@@ -232,6 +239,8 @@ const DAYS := [
 			{"t": "fx", "if": ["hid_roy", "!roy_found"], "trust": {"roy": 1}},
 			{"t": "ach", "if": ["hid_roy", "!roy_found"], "id": "empty_attic"},
 			{"t": "say", "who": "meowth", "if": "sold_roy", "text": "…너랑은 당분간 말하기 싫다옹."},
+			{"t": "say", "who": "sena", "if": "lent_sena", "text": "자, 3,000원. 약속했잖아. …엄마가 너한테 김밥 싸 주래."},
+			{"t": "fx", "if": "lent_sena", "money": 3000, "sena": 1},
 			{"t": "work"},
 			{"t": "report"},
 			{"t": "evening"},

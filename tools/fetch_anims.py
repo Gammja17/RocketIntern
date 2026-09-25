@@ -17,6 +17,7 @@ from PIL import Image, ImageSequence
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 ANIM = ROOT / "assets" / "pokemon_anim"
 STILL = ROOT / "assets" / "pokemon"
+CRIES = ROOT / "assets" / "cries"   # 상자를 열 때 나는 울음소리 (쇼다운 audio/cries)
 
 # 쇼다운 파일 이름 (영어 소문자, 기호 없음)
 SLUG = {
@@ -40,6 +41,7 @@ def used_ids() -> list[int]:
         text = f.read_text(encoding="utf-8")
         ids |= {int(n) for n in re.findall(r'"(?:id|enemy|pokemon)":\s*(\d+)', text)}
         ids |= {int(n) for n in re.findall(r'pokemon:(\d+)', text)}
+        ids |= {int(n) for n in re.findall(r'^\t\[(\d+), "', text, re.M)}   # extra.gd 의 WILD
     return sorted(ids)
 
 
@@ -51,6 +53,7 @@ def get(url: str) -> bytes:
 
 def main() -> None:
     ANIM.mkdir(parents=True, exist_ok=True)
+    CRIES.mkdir(parents=True, exist_ok=True)
     meta = {}
     for pid in used_ids():
         still = STILL / f"{pid}.png"
@@ -65,6 +68,9 @@ def main() -> None:
         sheet.save(ANIM / f"{pid}.png")
         ms = max(20, gif.info.get("duration", 60))
         meta[pid] = (len(frames), w, h, ms)
+        cry = CRIES / f"{pid}.mp3"
+        if not cry.exists():
+            cry.write_bytes(get(f"https://play.pokemonshowdown.com/audio/cries/{SLUG[pid]}.mp3"))
         print(pid, SLUG[pid], len(frames), "frames", f"{w}x{h}")
     lines = ["extends RefCounted", "## tools/fetch_anims.py 가 만든다. 번호: [프레임 수, 너비, 높이, 프레임 길이(ms)]", "", "const META := {"]
     lines += [f"\t{pid}: [{n}, {w}, {h}, {ms}]," for pid, (n, w, h, ms) in meta.items()]

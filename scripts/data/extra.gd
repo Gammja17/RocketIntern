@@ -55,11 +55,11 @@ const PLACES := [
 		{"t": "bg", "name": "forest"},
 		{"t": "bgm", "name": "pallet"},
 		{"t": "say", "who": "narr", "text": "상록숲은 창고에서 걸어서 삼십 분 거리다. 나무 사이로 햇빛이 조각조각 떨어졌다."},
-		{"t": "say", "who": "minsu", "if": "rel:caterpie", "text": "형도 벌레 잡으러 왔어요? 얘는 초록이예요! 한번 잃어버렸는데 혼자 집에 찾아왔어요. 대단하죠?"},
+		{"t": "say", "who": "minsu", "if": "rel:caterpie", "text": "벌레 잡으러 오셨어요? 얘는 초록이예요! 한번 잃어버렸는데 혼자 집에 찾아왔어요. 대단하죠?"},
 		{"t": "say", "who": "narr", "if": "rel:caterpie", "text": "민수 어깨 위의 캐터피가 나를 빤히 보았다. 기억하는 걸까. 설마."},
 		{"t": "say", "who": "minsu", "if": ["sent:caterpie", "!bought_butterfree"], "text": "초록아! 초록아…! 아, 죄송해요. 혹시 캐터피 못 보셨어요? 초록색이고요, 이만해요."},
 		{"t": "say", "who": "minsu", "if": ["sent:caterpie", "!bought_butterfree"], "text": "매일 여기서 불러요. 초록이는 제 목소리를 알거든요. 언젠가는 대답할 거예요."},
-		{"t": "say", "who": "minsu", "if": "bought_butterfree", "text": "형! 초록이가 버터플이 돼서 돌아왔어요! 제가 쓴 쪽지도 그대로 달고요! 누가 보냈는지는 몰라요."},
+		{"t": "say", "who": "minsu", "if": "bought_butterfree", "text": "저기요! 초록이가 버터플이 돼서 돌아왔어요! 제가 쓴 쪽지도 그대로 달고요! 누가 보냈는지는 몰라요."},
 		{"t": "say", "who": "narr", "if": ["!rel:caterpie", "!sent:caterpie"], "text": "숲은 조용했다. 잠깐이나마 창고 일을 잊을 수 있었다."},
 	]},
 	{"key": "visit", "text": "돌려보낸 포켓몬의 집 찾아가 보기", "if": "returned>=1", "steps": [
@@ -227,3 +227,131 @@ const WILD := [
 	[37, "식스테일", ["7번 도로 풀숲.", "홍련섬 가는 배 창고에 숨어 있었다."]],
 	[63, "캐이시", ["24번 도로에서 잠든 것을 그대로 들고 왔다.", "노랑시티 골목에서 잠든 채 발견됐다."]],
 ]
+
+## 창고 안 사건. 평일 아침 검수 전에 판의 씨앗에 따라 가끔 하나씩 끼어든다 (한 판에 같은 사건은 한 번).
+## fx 의 "quota" 는 오늘 할당량을 바꾸고, "day_flag" 는 오늘만 켜지는 표시다.
+const EVENTS := [
+	{"key": "escape", "steps": [
+		{"t": "say", "who": "narr", "text": "출근하자마자 상자 하나가 덜컹거리더니 뚜껑이 튀어 올랐다. 꼬렛 한 마리가 창고 안을 미친 듯이 뛰어다녔다.", "pokemon": 19},
+		{"t": "choice", "options": [
+			{"text": "잡아서 상자에 다시 넣는다"},
+			{"text": "뒷문 쪽으로 몰아서 내보낸다", "susp": 5, "trust": {"roy": 1}, "steps": [{"t": "say", "who": "roy", "text": "하하, 쥐가 한 마리 늘었네. 보고서엔 원래부터 빈 상자였다고 쓰자."}]},
+		]},
+	]},
+	{"key": "late_truck", "steps": [
+		{"t": "say", "who": "rosa", "text": "본사 트럭이 고장 났대. 오늘은 한 대만 온다니까 할당량이 하나 줄었어."},
+		{"t": "fx", "quota": -1},
+		{"t": "choice", "options": [
+			{"text": "남는 시간에 창고를 청소한다 (의심도 -10)", "susp": -10},
+			{"text": "선배들과 잡담을 한다", "trust": {"rosa": 1, "roy": 1}},
+		]},
+	]},
+	{"key": "tuna", "steps": [
+		{"t": "say", "who": "narr", "text": "창고 비상식량 선반 앞에서 나옹이 참치캔 세 개를 끌어안은 채 굳어 있었다.", "pokemon": 52},
+		{"t": "say", "who": "meowth", "text": "…이건 그냥 옮기던 중이었다옹. 진짜다옹."},
+		{"t": "choice", "options": [
+			{"text": "참치캔 값을 대신 채워 넣는다 (-500원)", "money": -500, "trust": {"meowth": 2}, "steps": [{"t": "say", "who": "meowth", "text": "…이 은혜는 참치캔으로 갚겠다옹. 아, 그건 좀 어렵다옹."}]},
+			{"text": "못 본 척한다", "trust": {"meowth": -1}},
+		]},
+	]},
+	{"key": "phone_audit", "steps": [
+		{"t": "say", "who": "apollo", "text": "어제 실적을 전화로 보고해라. 숫자만 말해."},
+		{"t": "choice", "options": [
+			{"text": "실적을 조금 부풀려 보고한다 (의심도 -10, 아폴로의 경계 +1)", "susp": -10, "watch": 1},
+			{"text": "있는 그대로 말한다"},
+		]},
+	]},
+	{"key": "rain", "steps": [
+		{"t": "say", "who": "narr", "text": "밤새 비가 와서 창고 지붕 한쪽이 샜다. 로사가 혼자 젖은 상자를 옮기고 있었다."},
+		{"t": "choice", "options": [
+			{"text": "점심을 거르고 같이 옮긴다", "trust": {"rosa": 1}, "steps": [{"t": "say", "who": "rosa", "text": "…고마워. 너 은근히 쓸 만하다."}]},
+			{"text": "내 몫 상자부터 챙긴다"},
+		]},
+	]},
+	{"key": "kid", "steps": [
+		{"t": "say", "who": "narr", "text": "창고 문틈으로 동네 꼬마가 얼굴을 들이밀었다."},
+		{"t": "say", "who": "minsu", "text": "저기요, 혹시 여기 우리 가디 있어요? 목에 빨간 방울 달았어요."},
+		{"t": "choice", "options": [
+			{"text": "여긴 그런 거 없다고 돌려보낸다"},
+			{"text": "경찰서에 가서 물어보라고 귀띔한다 (수사망 +4)", "heat": 4, "steps": [{"t": "say", "who": "narr", "text": "꼬마는 고개를 꾸벅 숙이고 경찰서 쪽으로 뛰어갔다."}]},
+		]},
+	]},
+	{"key": "sena_lunch", "steps": [
+		{"t": "say", "who": "sena", "text": "…엄마가 김밥을 너무 많이 쌌어. 버리긴 아깝잖아."},
+		{"t": "choice", "options": [
+			{"text": "같이 먹는다", "sena": 1, "steps": [{"t": "say", "who": "sena", "text": "맛있지? 우리 엄마 김밥이 무지개시티에서 제일이야. …아빠 빚만 없으면 가게도 차렸을 거야."}]},
+			{"text": "배불러서 괜찮다고 한다"},
+		]},
+	]},
+	{"key": "roy_play", "if": "!roy_gone", "steps": [
+		{"t": "say", "who": "narr", "text": "창고 구석에서 로이가 빗자루를 들고 혼자 대사를 읊고 있었다."},
+		{"t": "say", "who": "roy", "text": "'장미는 가시가 있어서 아름다운 거야!' …아, 봤어? 어릴 때 연극반이었거든."},
+		{"t": "choice", "options": [
+			{"text": "관객이 되어 박수를 쳐 준다", "trust": {"roy": 1}},
+			{"text": "일이나 하자고 한다", "trust": {"roy": -1}, "susp": -3},
+		]},
+	]},
+	{"key": "blackout", "steps": [
+		{"t": "say", "who": "narr", "text": "오전 내내 창고가 정전이었다. 감시 카메라도 꺼져 있었다."},
+		{"t": "choice", "options": [
+			{"text": "이 틈에 뒷문 빗장을 풀어 둔다 (오늘 처음 풀어주는 한 마리는 의심받지 않는다)", "day_flag": "blackout"},
+			{"text": "전기가 들어올 때까지 가만히 기다린다"},
+		]},
+	]},
+	{"key": "rat_swarm", "steps": [
+		{"t": "say", "who": "narr", "text": "상자 사이에서 야생 꼬렛 떼가 쏟아져 나왔다. 사료 포대를 노리고 들어온 모양이었다.", "pokemon": 19},
+		{"t": "choice", "options": [
+			{"text": "빗자루로 쫓아낸다 (해충 퇴치 수당 +300원)", "money": 300},
+			{"text": "사료를 조금 나눠 주고 내보낸다", "susp": 3, "trust": {"meowth": 1}},
+		]},
+	]},
+	{"key": "apollo_note", "if": "watch>=1", "steps": [
+		{"t": "say", "who": "narr", "text": "내 검수 책상 위에 쪽지가 놓여 있었다. '너를 보고 있다. -A'"},
+		{"t": "choice", "options": [
+			{"text": "쪽지를 찢어 버린다"},
+			{"text": "오늘은 보고서를 더 꼼꼼히 쓴다 (의심도 -8, 할당량 +1)", "susp": -8, "quota": 1},
+		]},
+	]},
+	{"key": "hana_door", "if": ["sent:eevee", "!ret:vaporeon", "week>=2"], "steps": [
+		{"t": "say", "who": "narr", "text": "창고 문에 전단이 붙어 있었다. '솜이를 찾습니다.' 아이 글씨로 '이 근처에서 봤다는 사람이 있어요'라고 덧붙여 있었다."},
+		{"t": "choice", "options": [
+			{"text": "전단을 떼어 버린다 (수사망 -3)", "heat": -3},
+			{"text": "그대로 둔다 (수사망 +3)", "heat": 3},
+		]},
+	]},
+]
+
+## 기록실: 결말과 동료 운명의 이름.
+const ENDING_NAMES := {
+	"rocket": "안 읽는 게 편해", "records": "기록 상자", "deal": "거래", "truck": "마지막 트럭", "first": "첫 포켓몬",
+	"turn": "돌아온 차례", "empty": "빈 몬스터볼", "cuffed": "수갑", "fired": "뒷문으로 나간 사람", "locked": "잠긴 창고",
+}
+const FATE_NAMES := {
+	"rosa": {"prison": "수감된 로사", "rocket": "기록을 쫓는 잔당 간부", "reunion": "설산의 모녀", "search": "텅 빈 오두막", "wander": "기록을 찾아 떠돌다", "trio": "실패하는 로켓단", "trio_snow": "다섯 번째 식구"},
+	"roy": {"wedding": "또 도망친 신랑", "trio": "실패가 좋은 로이", "taken": "성도의 인질", "prison": "변호사를 거절한 청년", "dog_search": "대장을 찾아서", "drifter": "항구의 파란 머리", "with_dog": "대장과 함께", "home": "돌아가는 것도 도망은 아니다"},
+	"sena": {"free": "빚 없는 보리네", "returned": "돌려준 차례", "prison": "피해자이자 공범", "rocket": "실적 1등 잔당", "shelter": "보호소의 세나", "quit": "편의점 야간 알바"},
+	"meowth": {"trio": "삼인조의 나옹", "together": "골목의 두 나옹", "alone": "혼자 떠도는 나옹", "snow": "난로 앞 자리"},
+}
+const FATE_WHO := {"rosa": "로사", "roy": "로이", "sena": "세나", "meowth": "나옹"}
+
+## 풀밭 손님: 전에 풀어준 녀석이 가끔 들른다 (한 판에 한 번씩).
+const GUESTS := [
+	{"key": "squirtle", "if": "rel:squirtle", "id": 7, "text": "선글라스를 낀 꼬부기가 풀밭에 들렀다. 소방대 배지를 반짝이며 경례를 하고 갔다."},
+	{"key": "caterpie", "if": ["rel:caterpie", "week>=2"], "id": 10, "text": "풀숲에서 캐터피 한 마리가 고개를 내밀었다. 목에 낡은 쪽지 자국이 있었다. 초록이였다. 녀석은 한참 나를 보다가 상록숲 쪽으로 기어갔다."},
+	{"key": "growlithe", "if": "rel:growlithe", "id": 58, "fx": {"heat": -5}, "text": "경찰견 3호가 순찰 중에 풀밭을 지나갔다. 킁킁거리더니 모른 척하고 가 버렸다. 순경에게도 아무 말 하지 않은 것 같다."},
+	{"key": "eevee", "if": "rel:eevee", "id": 133, "text": "분홍 리본을 단 이브이가 풀밭 가장자리에서 한참 나를 보다가 무지개시티 쪽으로 돌아갔다."},
+	{"key": "pidgey", "if": "rel:pidgey1", "id": 16, "fx": {"money": 500}, "text": "구구가 다리에 새 쪽지를 묶고 날아왔다. '편지 고마워요. 갈색시티에서.' 쪽지 안에 500원짜리 동전이 끼워져 있었다."},
+	{"key": "meowzie", "if": ["rel:meowth_stray", "!home:meowth_stray", "!meadow:meowth_stray"], "id": 52, "fx": {"trust": {"meowth": 1}}, "text": "떠돌이 나옹이 선배네 나옹과 나란히 풀밭을 지나갔다. 선배네 나옹이 나를 보고 앞발을 들어 보였다."},
+	{"key": "dratini", "if": "rel:dratini", "id": 147, "text": "창고 앞 도랑에 미뇽 한 마리가 꼬리를 흔들고 있었다. 사파리존까지 가는 길에 들렀나 보다."},
+]
+
+## 배틀 특기: 원룸 식구마다 한 번씩 쓸 수 있다. [이름, 효과]
+## big 큰 한 방 · multi 두 번 공격 · copy 상대의 가장 센 공격 두 배로 돌려주기 · dodge 이번 공격을 피하고 힘 모으기
+## sleep 상대가 한 번 쉰다 · coin 공격하면서 동전을 줍는다
+const MOVES := {
+	"_loaner": ["필살 앞니", "big"],
+	"cubone": ["뼈다귀 부메랑", "multi"], "cubone2": ["뼈다귀 부메랑", "multi"],
+	"ditto": ["변신", "copy"], "abra": ["순간이동", "dodge"], "porygon": ["록온", "big"],
+	"meowth_stray": ["고양이돈받기", "coin"], "psyduck": ["염동력", "big"], "slowpoke": ["하품", "sleep"],
+	"mankey_s": ["난동부리기", "big"], "nidoran_f": ["두번치기", "multi"], "nidoran_m": ["두번치기", "multi"],
+}
