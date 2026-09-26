@@ -58,6 +58,7 @@
   `godot --headless --path . -s tools/sim.gd -- kind 1 2` (전략 kind · evil · greedy · random, 씨앗, 마지막 선택 번호)
 - `tools/shot.gd`: 장면 캡처. `godot --path . -s tools/shot.gd -- <폴더>`
 - `tools/fetch_anims.py`: 데이터에 나온 포켓몬의 움직이는 스프라이트를 받아 프레임 시트로 만든다
+- `tools/ui_check.gd`: 끝까지 돌리며 패널이 화면 밖으로 나가거나 겹치는지 잰다. 창이 있어야 한다. `godot --path . -s tools/ui_check.gd -- en 540 960 2`
 - `tools/explore.gd`: 성향이 제각각인 가상 플레이어로 끝까지 돌려 분기점과 서로 다른 결말 조합을 센다. `godot --headless --path . -s tools/explore.gd -- 300 1`
 
 ## 에셋 출처와 주의

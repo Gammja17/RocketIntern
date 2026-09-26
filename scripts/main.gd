@@ -164,6 +164,7 @@ func _ready() -> void:
 		var c: Control = get_node(n)
 		landscape[n] = Rect2(c.position, c.size)
 	get_window().size_changed.connect(_apply_layout)
+	top_bar.resized.connect(func(): _fit_top.call_deferred())
 	_apply_layout()
 	_setup_settings()
 	var blink := create_tween().set_loops()   # 대화창의 ▼ 가 깜빡인다
@@ -204,6 +205,7 @@ func _apply_layout() -> void:
 		c.size = r.size
 	for n in [stage, dialog_panel, crate_sprite]:
 		base_pos[n] = n.position
+	_fit_top.call_deferred()
 
 
 func _process(delta: float) -> void:
@@ -716,6 +718,7 @@ func _show_choice(opts: Array, caption := "", pokemon := 0) -> void:
 		stage.show()
 	var o := 1 if is_portrait else 0
 	choice_box.position.y = CHOICE_Y_LOW[o] if pokemon > 0 else CHOICE_Y[o]
+	_fit_choice.call_deferred()
 	for i in choice_btns.size():
 		var b := choice_btns[i]
 		b.visible = i < opts.size()
@@ -804,6 +807,7 @@ func _show_crate() -> void:
 	docs_panel.show()
 	rule_label.text = info.get("rule", "")
 	rule_label.show()
+	_fit_top.call_deferred()
 	docs_label.text = "\n\n".join(PackedStringArray(_docs().map(_doc_bbcode)))
 	crate_label.text = tr("상자 %d / %d") % [crate_i + 1, crates.size()]
 	_set_pokemon(crate_sprite, c.id)
@@ -1765,7 +1769,16 @@ func _open_settings() -> Array:
 	before_settings = waiting
 	waiting = "settings"
 	%SettingsLayer.show()
+	_center_settings.call_deferred()
 	return []
+
+
+## 설정 창은 내용 높이에 맞춰 화면 한가운데 둔다.
+func _center_settings() -> void:
+	var sp: Control = get_node("SettingsLayer/SettingsPanel")
+	var need: float = sp.get_combined_minimum_size().y
+	sp.size.y = need
+	sp.position.y = maxf(4.0, (get_viewport_rect().size.y - need) / 2.0)
 
 
 func _close_settings() -> void:
@@ -1913,3 +1926,31 @@ func _danger(bar: Control, on: bool) -> void:
 		danger_tweens[bar].kill()
 		danger_tweens.erase(bar)
 		bar.self_modulate = Color.WHITE
+
+
+## 위쪽 막대(글자가 길면 여러 줄로 접힌다)와 규칙 줄 아래로 규칙 줄 · 상자 카드 · 서류철을 밀어 내린다.
+## 패널의 아래 끝은 그대로 두고 위쪽만 줄인다.
+func _fit_top() -> void:
+	var layout: Dictionary = PORTRAIT if is_portrait else landscape
+	var bar_bottom: float = top_bar.position.y + top_bar.get_combined_minimum_size().y + 4
+	var rule_base: Rect2 = PORTRAIT["RuleLabel"] if is_portrait else landscape["RuleLabel"]
+	rule_label.position.y = maxf(rule_base.position.y, bar_bottom)
+	rule_label.size.y = rule_label.get_combined_minimum_size().y
+	var below := bar_bottom
+	if rule_label.visible and rule_label.text != "":
+		below = rule_label.position.y + rule_label.get_combined_minimum_size().y + 4
+	for n in ["WorkPanel", "DocsPanel"]:
+		var c: Control = get_node(n)
+		var r: Rect2 = layout[n]
+		var top := maxf(r.position.y, below if (n == "WorkPanel" or not is_portrait) else r.position.y)
+		c.position.y = top
+		c.size.y = r.end.y - top
+
+
+## 선택지가 많거나 길어서 화면 아래를 넘으면 그만큼 위로 올린다.
+func _fit_choice() -> void:
+	var need: float = choice_box.get_combined_minimum_size().y
+	var limit: float = get_viewport_rect().size.y - 8
+	if choice_box.position.y + need > limit:
+		choice_box.position.y = maxf(top_bar.position.y + top_bar.get_combined_minimum_size().y + 4, limit - need)
+	choice_box.size.y = need

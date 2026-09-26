@@ -1,6 +1,6 @@
-"""위쪽 막대 아이콘(16x16 픽셀아트)을 그린다: 돈 · 의심도 · 수사망.
+"""위쪽 막대 아이콘(16x16 픽셀아트)을 그린다: 돈 · 의심도 · 수사망 · 설정.
 
-python tools/make_icons.py  →  assets/ui/icon_money.png · icon_susp.png · icon_heat.png
+python tools/make_icons.py  →  assets/ui/icon_money.png · icon_susp.png · icon_heat.png · icon_gear.png
 """
 import pathlib
 
@@ -47,6 +47,24 @@ ICONS = {
         ".....kkkkkk.....",
         "................",
         "................",
+        "................",
+    ],
+    "icon_gear": [  # 설정 톱니바퀴
+        "................",
+        ".......kk.......",
+        "...kk.kwwk.kk...",
+        "..kwwkkwwkkwwk..",
+        "..kwwwwwwwwwwk..",
+        "...kwwwkkwwwk...",
+        ".kkkwwk..kwwkkk.",
+        "kwwwwk....kwwwwk",
+        "kwwwwk....kwwwwk",
+        ".kkkwwk..kwwkkk.",
+        "...kwwwkkwwwk...",
+        "..kwwwwwwwwwwk..",
+        "..kwwkkwwkkwwk..",
+        "...kk.kwwk.kk...",
+        ".......kk.......",
         "................",
     ],
     "icon_heat": [  # 경찰 경광등
