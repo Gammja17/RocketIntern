@@ -141,13 +141,7 @@ var settings := {"lang": "", "music": 0.8, "sfx": 0.8, "speed": 1, "fullscreen":
 var before_settings := ""   # 설정 창을 열기 전의 waiting
 var is_portrait := false
 static var auto_continue := false   # 저장 코드를 붙여 넣은 뒤에는 타이틀을 거치지 않고 바로 이어한다
-
-
-## FileAccess.file_exists() 대신 쓴다. 4.7.2 웹 익스포트에서 file_exists() 가
-## 같은 함수 안에서 연달아 불리면 이따금 null(거짓)을 돌려주는 코드생성 버그가 있어서,
-## 저장이 있는데도 타이틀에 '이어하기'가 안 뜨던 원인이었다. open() 은 언제나 옳다.
-func _has_file(path: String) -> bool:
-	return FileAccess.open(path, FileAccess.READ) != null
+var visibility_cb: JavaScriptObject   # 붙들고 있지 않으면 콜백이 풀려 사라진다
 
 
 func _ready() -> void:
@@ -167,6 +161,7 @@ func _ready() -> void:
 	top_bar.resized.connect(func(): _fit_top.call_deferred())
 	_apply_layout()
 	_setup_settings()
+	_mute_when_hidden()
 	var blink := create_tween().set_loops()   # 대화창의 ▼ 가 깜빡인다
 	blink.tween_property(%HintLabel, "modulate:a", 0.15, 0.5)
 	blink.tween_property(%HintLabel, "modulate:a", 1.0, 0.5)
@@ -185,7 +180,7 @@ func _ready() -> void:
 		for id in achieved:   # 켤 때마다 이미 이룬 과제를 SKEAM 에 다시 알린다
 			JavaScriptBridge.eval("window.SKEAM && SKEAM.unlock('%s')" % id)
 	%AchClose.pressed.connect(func(): ach_panel.hide(); _title_menu())
-	if auto_continue and _has_file(SAVE_PATH):
+	if auto_continue and FileAccess.file_exists(SAVE_PATH):
 		auto_continue = false
 		_load_game()
 	else:
@@ -243,7 +238,7 @@ func _title_menu() -> void:
 		rule_label.text = "이 브라우저에서는 저장이 지워질 수 있어요. '저장 코드'를 복사해 두면 하던 곳부터 이어할 수 있어요."
 		rule_label.show()
 	var opts := [{"text": "처음부터", "call": "_new_game"}]
-	if _has_file(SAVE_PATH):
+	if FileAccess.file_exists(SAVE_PATH):
 		opts.push_front({"text": "이어하기", "call": "_load_game"})
 	opts.append({"text": "저장 코드", "call": "_code_menu"})
 	opts.append({"text": "설정", "call": "_open_settings"})
@@ -585,7 +580,7 @@ func _show_title(text: String) -> void:
 
 
 func _show_end(text: String) -> void:
-	if _has_file(SAVE_PATH):
+	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 	st.ended = true
 	_web_backup()
@@ -1765,6 +1760,29 @@ func _apply_settings(save := true) -> void:
 			sf.store_string(JSON.stringify(settings))
 
 
+## 웹판은 탭이 가려지면 게임은 멈춰도 브라우저가 음악을 계속 튼다 (다른 탭에서 다른 게임을 켜도 들린다).
+## 가려지면 소리를 끄고, 다시 보이면 켠다.
+func _mute_when_hidden() -> void:
+	if not OS.has_feature("web"):
+		return
+	visibility_cb = JavaScriptBridge.create_callback(_on_visibility)
+	JavaScriptBridge.get_interface("document").addEventListener("visibilitychange", visibility_cb)
+	_on_visibility([])
+
+
+func _on_visibility(_args: Array) -> void:
+	var hidden := _js_true("document.hidden")
+	AudioServer.set_bus_mute(0, hidden)
+	bgm.stream_paused = hidden
+
+
+## JS 식이 참인지. JavaScriptBridge.eval() 은 JS 불리언을 정수(0/1)로 돌려주는데, 이걸 == true 로 비교하면
+## int 와 bool 비교 오류가 난다. 릴리스 빌드는 그 오류를 알리지 않고 뒤따르는 호출까지 엉망으로 만든다
+## (타이틀에서 저장 파일이 있어도 '이어하기'가 안 뜨던 원인).
+func _js_true(expr: String) -> bool:
+	return int(JavaScriptBridge.eval("(%s) ? 1 : 0" % expr)) == 1
+
+
 func _open_settings() -> Array:
 	before_settings = waiting
 	waiting = "settings"
@@ -1826,7 +1844,7 @@ func _web_restore() -> void:
 	var files := {SAVE_PATH: b.get("save", {}), ACH_PATH: b.get("ach", {}), RECORDS_PATH: b.get("records", {})}
 	for path in files:
 		var data = files[path]
-		if not _has_file(path) and data is Dictionary and not data.is_empty():
+		if not FileAccess.file_exists(path) and data is Dictionary and not data.is_empty():
 			var f := FileAccess.open(path, FileAccess.WRITE)
 			if f:
 				f.store_string(JSON.stringify(data))
@@ -1852,7 +1870,7 @@ func _storage_fragile() -> bool:
 		return false
 	if not OS.is_userfs_persistent():
 		return true
-	return JavaScriptBridge.eval("window.parent !== window") == true
+	return _js_true("window.parent !== window")
 
 
 func _copy_save_code() -> void:
