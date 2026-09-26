@@ -143,6 +143,13 @@ var is_portrait := false
 static var auto_continue := false   # 저장 코드를 붙여 넣은 뒤에는 타이틀을 거치지 않고 바로 이어한다
 
 
+## FileAccess.file_exists() 대신 쓴다. 4.7.2 웹 익스포트에서 file_exists() 가
+## 같은 함수 안에서 연달아 불리면 이따금 null(거짓)을 돌려주는 코드생성 버그가 있어서,
+## 저장이 있는데도 타이틀에 '이어하기'가 안 뜨던 원인이었다. open() 은 언제나 옳다.
+func _has_file(path: String) -> bool:
+	return FileAccess.open(path, FileAccess.READ) != null
+
+
 func _ready() -> void:
 	days = W1.DAYS + W2.DAYS + W3.DAYS + W4.DAYS
 	for c in choice_box.get_children():
@@ -163,21 +170,21 @@ func _ready() -> void:
 	blink.tween_property(%HintLabel, "modulate:a", 0.15, 0.5)
 	blink.tween_property(%HintLabel, "modulate:a", 1.0, 0.5)
 	_web_restore()
-	if FileAccess.file_exists(ACH_PATH):
-		var af := FileAccess.open(ACH_PATH, FileAccess.READ)
-		var parsed = JSON.parse_string(af.get_as_text()) if af else null
+	var af := FileAccess.open(ACH_PATH, FileAccess.READ)
+	if af:
+		var parsed = JSON.parse_string(af.get_as_text())
 		if parsed is Dictionary:   # 깨진 파일이면 무시한다
 			achieved = parsed
-	if FileAccess.file_exists(RECORDS_PATH):
-		var rf := FileAccess.open(RECORDS_PATH, FileAccess.READ)
-		var parsed_r = JSON.parse_string(rf.get_as_text()) if rf else null
+	var rf := FileAccess.open(RECORDS_PATH, FileAccess.READ)
+	if rf:
+		var parsed_r = JSON.parse_string(rf.get_as_text())
 		if parsed_r is Dictionary:
 			records.merge(parsed_r, true)
 	if OS.has_feature("web"):
 		for id in achieved:   # 켤 때마다 이미 이룬 과제를 SKEAM 에 다시 알린다
 			JavaScriptBridge.eval("window.SKEAM && SKEAM.unlock('%s')" % id)
 	%AchClose.pressed.connect(func(): ach_panel.hide(); _title_menu())
-	if auto_continue and FileAccess.file_exists(SAVE_PATH):
+	if auto_continue and _has_file(SAVE_PATH):
 		auto_continue = false
 		_load_game()
 	else:
@@ -234,7 +241,7 @@ func _title_menu() -> void:
 		rule_label.text = "이 브라우저에서는 저장이 지워질 수 있어요. '저장 코드'를 복사해 두면 하던 곳부터 이어할 수 있어요."
 		rule_label.show()
 	var opts := [{"text": "처음부터", "call": "_new_game"}]
-	if FileAccess.file_exists(SAVE_PATH):
+	if _has_file(SAVE_PATH):
 		opts.push_front({"text": "이어하기", "call": "_load_game"})
 	opts.append({"text": "저장 코드", "call": "_code_menu"})
 	opts.append({"text": "설정", "call": "_open_settings"})
@@ -576,7 +583,7 @@ func _show_title(text: String) -> void:
 
 
 func _show_end(text: String) -> void:
-	if FileAccess.file_exists(SAVE_PATH):
+	if _has_file(SAVE_PATH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 	st.ended = true
 	_web_backup()
@@ -1704,9 +1711,9 @@ func _walk_home() -> Array:
 # ── 설정 ──────────────────────────────────────────────
 
 func _setup_settings() -> void:
-	if FileAccess.file_exists(SETTINGS_PATH):
-		var sf := FileAccess.open(SETTINGS_PATH, FileAccess.READ)
-		var parsed = JSON.parse_string(sf.get_as_text()) if sf else null
+	var sf := FileAccess.open(SETTINGS_PATH, FileAccess.READ)
+	if sf:
+		var parsed = JSON.parse_string(sf.get_as_text())
 		if parsed is Dictionary:
 			settings.merge(parsed, true)
 	if settings.lang == "":
@@ -1777,7 +1784,7 @@ func _bundle() -> Dictionary:
 	var save := {}
 	if not st.is_empty() and not st.get("ended", false):
 		save = save_data if not save_data.is_empty() else {"v": 2, "st": st}
-	elif FileAccess.file_exists(SAVE_PATH):
+	else:
 		var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
 		var parsed = JSON.parse_string(f.get_as_text()) if f else null
 		if parsed is Dictionary:
@@ -1792,12 +1799,24 @@ func _web_backup(bundle: Dictionary = {}) -> void:
 	JavaScriptBridge.eval("try{localStorage.setItem('%s', %s)}catch(e){}" % [BACKUP_KEY, JSON.stringify(text)])
 
 
+## 기본 저장(user://)에서 사라진 파일만 localStorage 예비 저장에서 되살린다.
+## (도전 과제 파일만 살아남고 저장 파일이 지워진 경우에도 저장 파일을 되살려야 한다.)
 func _web_restore() -> void:
-	if not OS.has_feature("web") or FileAccess.file_exists(SAVE_PATH) or FileAccess.file_exists(ACH_PATH):
+	if not OS.has_feature("web"):
 		return
 	var raw = JavaScriptBridge.eval("(function(){try{return localStorage.getItem('%s')||''}catch(e){return ''}})()" % BACKUP_KEY)
-	if raw is String and raw != "":
-		_apply_bundle(JSON.parse_string(raw))
+	if not (raw is String) or raw == "":
+		return
+	var b = JSON.parse_string(raw)
+	if not b is Dictionary or not b.has("v"):
+		return
+	var files := {SAVE_PATH: b.get("save", {}), ACH_PATH: b.get("ach", {}), RECORDS_PATH: b.get("records", {})}
+	for path in files:
+		var data = files[path]
+		if not _has_file(path) and data is Dictionary and not data.is_empty():
+			var f := FileAccess.open(path, FileAccess.WRITE)
+			if f:
+				f.store_string(JSON.stringify(data))
 
 
 ## 저장 코드(또는 예비 저장)를 파일로 되살린다.
