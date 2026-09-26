@@ -6,6 +6,7 @@
 [ext_resource type="Texture2D" path="res://assets/ui/icon_susp.png" id="4_susp"]
 [ext_resource type="Texture2D" path="res://assets/ui/icon_heat.png" id="5_heat"]
 [ext_resource type="Texture2D" path="res://assets/trainers/teamrocket.png" id="6_trio"]
+[ext_resource type="Texture2D" path="res://assets/ui/icon_gear.png" id="7_gear"]
 
 [sub_resource type="StyleBoxFlat" id="panel"]
 content_margin_left = 14.0
@@ -240,10 +241,14 @@ show_percentage = false
 
 [node name="SettingsBtn" type="Button" parent="TopBarBg/TopBar"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(36, 30)
 layout_mode = 2
+size_flags_vertical = 4
+tooltip_text = "설정"
 focus_mode = 0
-theme_override_font_sizes/font_size = 18
-text = "설정"
+icon = ExtResource("7_gear")
+icon_alignment = 1
+expand_icon = true
 
 [node name="RuleLabel" type="Label" parent="."]
 unique_name_in_owner = true
@@ -354,14 +359,14 @@ theme_override_constants/outline_size = 4
 
 [node name="MemoLabel" type="Label" parent="WorkPanel/VBox/HBox/Info"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 0)
+custom_minimum_size = Vector2(220, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 autowrap_mode = 3
 
 [node name="ItemLabel" type="Label" parent="WorkPanel/VBox/HBox/Info"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 0)
+custom_minimum_size = Vector2(220, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.72, 0.72, 1)
 theme_override_font_sizes/font_size = 18
@@ -376,33 +381,37 @@ columns = 2
 
 [node name="SendBtn" type="Button" parent="WorkPanel/VBox/Buttons"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 52)
+custom_minimum_size = Vector2(200, 52)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 18
 text = "본사 트럭에 싣기"
+autowrap_mode = 3
 
 [node name="ReleaseBtn" type="Button" parent="WorkPanel/VBox/Buttons"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 52)
+custom_minimum_size = Vector2(200, 52)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 18
 text = "뒷문으로 풀어주기"
+autowrap_mode = 3
 
 [node name="ReturnBtn" type="Button" parent="WorkPanel/VBox/Buttons"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 52)
+custom_minimum_size = Vector2(200, 52)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 18
+autowrap_mode = 3
 
 [node name="SpecialBtn" type="Button" parent="WorkPanel/VBox/Buttons"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 52)
+custom_minimum_size = Vector2(200, 52)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 18
+autowrap_mode = 3
 
 [node name="DocsPanel" type="PanelContainer" parent="."]
 unique_name_in_owner = true
@@ -429,6 +438,7 @@ layout_mode = 2
 
 [node name="DocsLabel" type="RichTextLabel" parent="DocsPanel/VBox"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 0)
 layout_mode = 2
 mouse_filter = 2
 theme_override_colors/default_color = Color(0.15, 0.12, 0.1, 1)
@@ -500,26 +510,32 @@ theme_override_constants/separation = 8
 [node name="Choice0" type="Button" parent="ChoiceBox"]
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
+autowrap_mode = 3
 
 [node name="Choice1" type="Button" parent="ChoiceBox"]
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
+autowrap_mode = 3
 
 [node name="Choice2" type="Button" parent="ChoiceBox"]
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
+autowrap_mode = 3
 
 [node name="Choice3" type="Button" parent="ChoiceBox"]
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
+autowrap_mode = 3
 
 [node name="Choice4" type="Button" parent="ChoiceBox"]
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
+autowrap_mode = 3
 
 [node name="Choice5" type="Button" parent="ChoiceBox"]
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
+autowrap_mode = 3
 
 [node name="TitleLabel" type="Label" parent="."]
 unique_name_in_owner = true
@@ -632,7 +648,7 @@ theme_override_styles/panel = SubResource("panel")
 
 [node name="VBox" type="VBoxContainer" parent="SettingsLayer/SettingsPanel"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 6
 
 [node name="Title" type="Label" parent="SettingsLayer/SettingsPanel/VBox"]
 layout_mode = 2
@@ -642,7 +658,7 @@ text = "설정"
 [node name="Grid" type="GridContainer" parent="SettingsLayer/SettingsPanel/VBox"]
 layout_mode = 2
 theme_override_constants/h_separation = 16
-theme_override_constants/v_separation = 12
+theme_override_constants/v_separation = 6
 columns = 2
 
 [node name="LangText" type="Label" parent="SettingsLayer/SettingsPanel/VBox/Grid"]
@@ -651,7 +667,7 @@ text = "언어"
 
 [node name="LangOpt" type="OptionButton" parent="SettingsLayer/SettingsPanel/VBox/Grid"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
 size_flags_horizontal = 3
 
@@ -689,7 +705,7 @@ text = "글자 속도"
 
 [node name="SpeedOpt" type="OptionButton" parent="SettingsLayer/SettingsPanel/VBox/Grid"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
 size_flags_horizontal = 3
 
@@ -708,7 +724,7 @@ theme_override_constants/separation = 10
 
 [node name="CodeCopy" type="Button" parent="SettingsLayer/SettingsPanel/VBox/CodeRow"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 18
@@ -716,7 +732,7 @@ text = "저장 코드 복사"
 
 [node name="CodeLoad" type="Button" parent="SettingsLayer/SettingsPanel/VBox/CodeRow"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 18
@@ -724,12 +740,14 @@ text = "저장 코드 불러오기"
 
 [node name="CodeNote" type="Label" parent="SettingsLayer/SettingsPanel/VBox"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.82, 0.35, 1)
 theme_override_font_sizes/font_size = 18
 autowrap_mode = 3
 
 [node name="SaveNote" type="Label" parent="SettingsLayer/SettingsPanel/VBox"]
+custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.78, 1)
 theme_override_font_sizes/font_size = 18
@@ -738,7 +756,7 @@ autowrap_mode = 3
 
 [node name="SettingsClose" type="Button" parent="SettingsLayer/SettingsPanel/VBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 48)
+custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 text = "닫기"
 
