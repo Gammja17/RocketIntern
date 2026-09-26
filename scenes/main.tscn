@@ -751,7 +751,7 @@ custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.78, 1)
 theme_override_font_sizes/font_size = 18
-text = "게임은 매일 아침 자동으로 저장돼요. 하루 도중에 끄면 그날 아침부터 다시 시작해요. 저장 코드를 복사해 두면 다른 기기나 브라우저에서도 이어서 할 수 있어요."
+text = "게임은 장면마다 자동 저장돼요. 껐다 켜도 하던 장면부터 이어져요. 저장 코드를 복사해 두면 다른 기기나 브라우저에서도 이어서 할 수 있어요."
 autowrap_mode = 3
 
 [node name="SettingsClose" type="Button" parent="SettingsLayer/SettingsPanel/VBox"]
