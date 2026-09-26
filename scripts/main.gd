@@ -108,7 +108,8 @@ var choice_btns: Array[Button] = []
 
 ## 저장되는 상태
 var st := {}
-## 하루 동안만 쓰는 상태 (불러오면 그날 아침부터 다시)
+var save_data := {}   # 마지막으로 저장한 내용 그대로. 저장 코드도 이걸 쓴다
+## 하루 동안 쓰는 상태 (장면마다 저장에 함께 담겨서, 불러오면 그 장면부터)
 var crates: Array = []
 var crate_i := 0
 var sent_today: Array = []
@@ -121,12 +122,14 @@ var places_today := {}
 
 var queue: Array = []
 var waiting := ""
+var flow_seq := 0   # 새 게임 · 불러오기로 흐름이 새로 시작될 때마다 +1
 var choice_options: Array = []
 var typing: Tween
 var last_who := ""
 var bgm_name := ""
 var anims := {}   # TextureRect -> {frames, w, h, ms, t}
 var last_pick := 0
+var bg_name := ""
 var base_pos := {}  # 흔들림 · 튀어 오르기 뒤 돌아갈 자리
 var achieved := {}
 var records := {"runs": 0, "endings": {}, "fates": {}}
@@ -137,6 +140,7 @@ var landscape := {}   # 씬에 있는 가로 배치
 var settings := {"lang": "", "music": 0.8, "sfx": 0.8, "speed": 1, "fullscreen": false}
 var before_settings := ""   # 설정 창을 열기 전의 waiting
 var is_portrait := false
+static var auto_continue := false   # 저장 코드를 붙여 넣은 뒤에는 타이틀을 거치지 않고 바로 이어한다
 
 
 func _ready() -> void:
@@ -173,7 +177,12 @@ func _ready() -> void:
 		for id in achieved:   # 켤 때마다 이미 이룬 과제를 SKEAM 에 다시 알린다
 			JavaScriptBridge.eval("window.SKEAM && SKEAM.unlock('%s')" % id)
 	%AchClose.pressed.connect(func(): ach_panel.hide(); _title_menu())
-	_title_menu()
+	if auto_continue and FileAccess.file_exists(SAVE_PATH):
+		auto_continue = false
+		_load_game()
+	else:
+		auto_continue = false
+		_title_menu()
 
 
 ## 창(폰 화면)이 세로면 540x960 세로 배치, 가로면 960x540 가로 배치.
@@ -222,11 +231,12 @@ func _title_menu() -> void:
 	title_label.show()
 	%TitleArt.show()
 	if _storage_fragile():
-		rule_label.text = "이 브라우저에서는 저장이 지워질 수 있어요. 설정에서 저장 코드를 복사해 두세요."
+		rule_label.text = "이 브라우저에서는 저장이 지워질 수 있어요. '저장 코드'를 복사해 두면 하던 곳부터 이어할 수 있어요."
 		rule_label.show()
 	var opts := [{"text": "처음부터", "call": "_new_game"}]
 	if FileAccess.file_exists(SAVE_PATH):
 		opts.push_front({"text": "이어하기", "call": "_load_game"})
+	opts.append({"text": "저장 코드", "call": "_code_menu"})
 	opts.append({"text": "설정", "call": "_open_settings"})
 	opts.append({"text": tr("도전 과제 (%d / %d)") % [achieved.size(), Ach.LIST.size()], "call": "_show_achievements"})
 	opts.append({"text": tr("기록실 (%d / %d)") % [records.endings.size() + records.fates.size(), _record_total()], "call": "_show_records"})
@@ -297,9 +307,13 @@ func _unlock(id: String) -> void:
 	_web_backup()
 	var a: Dictionary = Ach.LIST.filter(func(x): return x.id == id)[0]
 	if OS.has_feature("web"):
-		toast_label.text = tr("도전 과제 달성\n%s") % tr(a.name)
+		_toast(tr("도전 과제 달성\n%s") % tr(a.name))
 	else:
-		toast_label.text = tr("도전 과제 달성: %s\n등록 코드 %s") % [tr(a.name), a.code]
+		_toast(tr("도전 과제 달성: %s\n등록 코드 %s") % [tr(a.name), a.code])
+
+
+func _toast(text: String) -> void:
+	toast_label.text = text
 	toast_panel.show()
 	toast_panel.modulate.a = 0.0
 	if toast_tween:
@@ -320,37 +334,96 @@ func _new_game() -> Array:
 	}
 	if int(records.runs) >= 1:
 		st.flags["replay"] = true
+	if OS.has_feature("web"):
+		_toast(tr("게임은 장면마다 자동 저장돼요. 저장 코드를 복사해 두면 다른 기기에서도 이어할 수 있어요."))
 	_start_day(0)
 	return []
 
 
 func _load_game() -> Array:
 	var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
-	st = JSON.parse_string(f.get_as_text())
-	for k in ["day", "money", "susp", "sena", "watch", "released_total", "heat"]:
-		st[k] = int(st[k])
-	for k in st.trust:
-		st.trust[k] = int(st.trust[k])
-	for k in st.meadow:
-		for field in ["days", "id", "bond"]:
-			st.meadow[k][field] = int(st.meadow[k][field])
-	for k in st.home:
-		st.home[k].id = int(st.home[k].id)
-		st.home[k].bond = int(st.home[k].get("bond", 3))
-	_start_day(st.day)
+	var parsed = JSON.parse_string(f.get_as_text()) if f else null
+	if not parsed is Dictionary:
+		return _new_game()
+	var mid = null
+	if parsed.has("st"):   # 장면 체크포인트가 담긴 저장
+		st = _fix_ints(parsed.st)
+		mid = parsed.get("mid")
+	else:   # 옛 저장: 그날 아침 상태만 있다
+		st = _fix_ints(parsed)
+	if mid is Dictionary and mid.has("queue"):
+		_restore_mid(_fix_ints(mid))
+	else:
+		_start_day(int(st.day))
 	return []
 
 
+## JSON 을 거치면 정수가 실수(3.0)가 된다. 소수점이 없는 값은 도로 정수로 만든다.
+func _fix_ints(v: Variant) -> Variant:
+	if v is Dictionary:
+		for k in v:
+			v[k] = _fix_ints(v[k])
+	elif v is Array:
+		for i in v.size():
+			v[i] = _fix_ints(v[i])
+	elif v is float and v == floorf(v):
+		return int(v)
+	return v
+
+
+## 장면 체크포인트에서 하루 중간 상태를 되살리고, 저장해 둔 그 장면부터 다시 보여 준다.
+func _restore_mid(mid: Dictionary) -> void:
+	flow_seq += 1
+	crates = mid.get("crates", [])
+	crate_i = int(mid.get("crate_i", 0))
+	sent_today = mid.get("sent", [])
+	rejected_today = mid.get("rej", [])
+	released_today = mid.get("rel", [])
+	kept_today = mid.get("kept", [])
+	bonus_today = int(mid.get("bonus", 0))
+	places_today = mid.get("places", {})
+	intro_seen = mid.get("intro", {})
+	quota_delta = int(mid.get("qd", 0))
+	day_flags = mid.get("dflags", {})
+	battle = mid.get("battle", {})
+	queue = mid.get("queue", [])
+	top_bar.show()
+	_set_bg(mid.get("bg", "warehouse"))
+	_play_bgm(mid.get("bgm", "hideout"))
+	_refresh_bar()
+	_advance()
+
+
+## 하루가 시작될 때의 저장. 여기엔 장면 체크포인트가 없어서, 불러오면 그날 아침부터.
 func _save() -> void:
+	_write_save({"v": 2, "st": st})
+
+
+## 장면이 뜰 때마다 지금 상태를 통째로 저장한다. 창이 새로고침돼도 이 장면부터 이어진다.
+## resume 은 지금 화면에 떠 있는 단계: 되살릴 때 큐 맨 앞에 놓여 같은 장면을 다시 그린다.
+func _checkpoint(resume: Dictionary) -> void:
+	if st.is_empty() or st.get("ended", false):
+		return
+	_write_save({"v": 2, "st": st, "mid": {
+		"crates": crates, "crate_i": crate_i, "sent": sent_today, "rej": rejected_today,
+		"rel": released_today, "kept": kept_today, "bonus": bonus_today, "places": places_today,
+		"intro": intro_seen, "qd": quota_delta, "dflags": day_flags, "battle": battle,
+		"bg": bg_name, "bgm": bgm_name, "queue": [resume] + queue,
+	}})
+
+
+func _write_save(data: Dictionary) -> void:
+	save_data = data
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f:   # 저장소가 잠겨 있으면 이번엔 건너뛴다
-		f.store_string(JSON.stringify(st))
+		f.store_string(JSON.stringify(data))
 	_web_backup()
 
 
 # ── 단계 진행 ──────────────────────────────────────────
 
 func _start_day(d: int) -> void:
+	flow_seq += 1
 	if d == 1:
 		_unlock("first_day")
 	st.day = d
@@ -454,6 +527,9 @@ func _advance() -> void:
 			"end":
 				_show_end(s.text)
 				return
+			"menu":
+				_title_menu()
+				return
 
 
 ## 사연 없는 채우기용 상자는 판마다 다른 야생 포켓몬이 된다. 판의 씨앗과 날짜로 정해서, 이어 해도 같은 녀석이 나온다.
@@ -484,6 +560,7 @@ func _hide_all() -> void:
 var title_seq := 0
 
 func _show_title(text: String) -> void:
+	_checkpoint({"t": "title", "text": text})
 	waiting = "anim"
 	title_seq += 1
 	var seq := title_seq
@@ -514,6 +591,7 @@ func _show_end(text: String) -> void:
 
 
 func _show_say(who: String, text: String, shake := false, pokemon := 0) -> void:
+	_checkpoint({"t": "say", "who": who, "text": text, "shake": shake, "pokemon": pokemon})
 	var person: Dictionary = Extra.PEOPLE.get(who, {})
 	fader.modulate.a = 0.0
 	dialog_panel.show()
@@ -591,8 +669,9 @@ func _crop(tex: Texture2D, rect: Rect2) -> AtlasTexture:
 	return a
 
 
-func _set_bg(bg_name: String) -> void:
-	bg.texture = load("res://assets/bg/%s.png" % bg_name)
+func _set_bg(bg_name_: String) -> void:
+	bg_name = bg_name_
+	bg.texture = load("res://assets/bg/%s.png" % bg_name_)
 
 
 func _play_bgm(bgm_name_: String) -> void:
@@ -621,6 +700,7 @@ func _play_sfx(sfx_name: String) -> void:
 
 ## caption 은 위쪽 규칙 줄에, pokemon 은 무대에 띄운다 (배틀 중 상대와 HP 를 보면서 고르게).
 func _show_choice(opts: Array, caption := "", pokemon := 0) -> void:
+	_checkpoint({"t": "choice", "options": opts, "caption": caption, "pokemon": pokemon})
 	choice_options = opts
 	rule_label.visible = caption != ""
 	rule_label.text = caption
@@ -648,8 +728,9 @@ func _on_choice(i: int) -> void:
 		_apply(o)
 	var extra: Array = []
 	if o.has("call"):
+		var seq := flow_seq
 		extra = call(o.call)
-		if waiting != "choice" and waiting != "":
+		if flow_seq != seq or (waiting != "choice" and waiting != ""):
 			return   # 새 게임 · 불러오기처럼 흐름을 새로 시작한 경우
 	queue = o.get("steps", []) + extra + queue
 	_advance()
@@ -710,6 +791,7 @@ func _show_crate() -> void:
 		queue = c.intro.map(func(x): return x.merged({"pokemon": c.id})) + [{"t": "work_resume"}] + queue
 		_advance()
 		return
+	_checkpoint({"t": "work_resume"})
 	var info: Dictionary = days[int(st.day)]
 	work_panel.show()
 	docs_panel.show()
@@ -1694,7 +1776,7 @@ func _close_settings() -> void:
 func _bundle() -> Dictionary:
 	var save := {}
 	if not st.is_empty() and not st.get("ended", false):
-		save = st
+		save = save_data if not save_data.is_empty() else {"v": 2, "st": st}
 	elif FileAccess.file_exists(SAVE_PATH):
 		var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
 		var parsed = JSON.parse_string(f.get_as_text()) if f else null
@@ -1703,10 +1785,10 @@ func _bundle() -> Dictionary:
 	return {"v": 1, "save": save, "ach": achieved, "records": records}
 
 
-func _web_backup() -> void:
+func _web_backup(bundle: Dictionary = {}) -> void:
 	if not OS.has_feature("web"):
 		return
-	var text := JSON.stringify(_bundle())
+	var text := JSON.stringify(_bundle() if bundle.is_empty() else bundle)
 	JavaScriptBridge.eval("try{localStorage.setItem('%s', %s)}catch(e){}" % [BACKUP_KEY, JSON.stringify(text)])
 
 
@@ -1751,7 +1833,8 @@ func _copy_save_code() -> void:
 		%CodeNote.text = tr("저장 코드를 클립보드에 복사했어요.")
 
 
-func _load_save_code() -> void:
+## 저장 코드를 읽어 되살린다. "ok" 면 씬을 다시 읽는 중, "empty" 는 빈 입력, "bad" 는 못 읽는 코드.
+func _load_save_code() -> String:
 	var code := ""
 	if OS.has_feature("web"):
 		var got = JavaScriptBridge.eval("window.prompt(%s, '')" % JSON.stringify(tr("저장 코드를 붙여 넣으세요.")))
@@ -1760,13 +1843,43 @@ func _load_save_code() -> void:
 		code = DisplayServer.clipboard_get()
 	code = code.strip_edges()
 	if code == "":
-		return
+		return "empty"
 	var parsed = JSON.parse_string(Marshalls.base64_to_utf8(code))
 	if not _apply_bundle(parsed):
 		%CodeNote.text = tr("저장 코드가 올바르지 않아요.")
-		return
-	_web_backup()
+		return "bad"
+	_web_backup(parsed)
+	waiting = "menu"   # 씬을 다시 읽는 동안 다른 흐름이 끼어들지 않게
+	auto_continue = true
 	get_tree().reload_current_scene()
+	return "ok"
+
+
+# ── 타이틀의 저장 코드 메뉴 ─────────────────────────────
+
+func _code_menu() -> Array:
+	return [{"t": "choice", "options": [
+		{"text": "저장 코드 복사 (수동 저장)", "call": "_code_copy_menu"},
+		{"text": "저장 코드 붙여넣기 (이어하기)", "call": "_code_load_menu"},
+		{"text": "돌아가기", "steps": [{"t": "menu"}]},
+	]}]
+
+
+func _code_copy_menu() -> Array:
+	_copy_save_code()
+	var out := []
+	if not OS.has_feature("web"):
+		out.append(_say(tr("저장 코드를 클립보드에 복사했어요.")))
+	return out + _code_menu()
+
+
+func _code_load_menu() -> Array:
+	match _load_save_code():
+		"ok":
+			return []   # 씬을 다시 읽고 저장된 장면부터 이어진다
+		"bad":
+			return [_say(tr("저장 코드가 올바르지 않아요."))] + _code_menu()
+	return _code_menu()
 
 
 ## 게이지가 위험 구간에 들어가면 깜빡인다.

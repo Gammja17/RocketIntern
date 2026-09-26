@@ -1138,7 +1138,7 @@ M-04는 우리 엄마 아보크 번호야. 어릴 때부터 외우고 있던 번
 자네 차례였던 그 이상해씨 말인가…. 한 달 전에 도둑맞았다네. 로켓단 짓이라더군. 미안하네.,자네 차례였던 그 이상해씨 말인가…. 한 달 전에 도둑맞았다네. 로켓단 짓이라더군. 미안하네.,"The Bulbasaur that was meant for you...? It was stolen a month ago. Team Rocket, they say. I'm sorry."
 "빈 몬스터볼을 도로 주머니에 넣었다. 누가 그 녀석을 트럭에 실었는지, 나는 알고 있었다.","빈 몬스터볼을 도로 주머니에 넣었다. 누가 그 녀석을 트럭에 실었는지, 나는 알고 있었다.",I put the empty Poké Ball back in my pocket. I knew exactly who had loaded it onto that truck.
 로켓단 신입사원,로켓단 신입사원,Team Rocket Intern Days
-이 브라우저에서는 저장이 지워질 수 있어요. 설정에서 저장 코드를 복사해 두세요.,이 브라우저에서는 저장이 지워질 수 있어요. 설정에서 저장 코드를 복사해 두세요.,This browser may erase your save. Copy a save code in Settings to be safe.
+이 브라우저에서는 저장이 지워질 수 있어요. '저장 코드'를 복사해 두면 하던 곳부터 이어할 수 있어요.,이 브라우저에서는 저장이 지워질 수 있어요. '저장 코드'를 복사해 두면 하던 곳부터 이어할 수 있어요.,This browser may erase your save. Copy a save code to pick up right where you left off.
 처음부터,처음부터,New Game
 이어하기,이어하기,Continue
 설정,설정,Settings
@@ -1307,4 +1307,9 @@ Entry code %s"
 전체 화면,전체 화면,Fullscreen
 저장 코드 복사,저장 코드 복사,Copy save code
 저장 코드 불러오기,저장 코드 불러오기,Load save code
-게임은 매일 아침 자동으로 저장돼요. 하루 도중에 끄면 그날 아침부터 다시 시작해요. 저장 코드를 복사해 두면 다른 기기나 브라우저에서도 이어서 할 수 있어요.,게임은 매일 아침 자동으로 저장돼요. 하루 도중에 끄면 그날 아침부터 다시 시작해요. 저장 코드를 복사해 두면 다른 기기나 브라우저에서도 이어서 할 수 있어요.,"The game saves automatically every morning. If you quit mid-day, you restart from that morning. Copy a save code to continue on another device or browser."
+저장 코드,저장 코드,Save Code
+저장 코드 복사 (수동 저장),저장 코드 복사 (수동 저장),Copy save code (manual save)
+저장 코드 붙여넣기 (이어하기),저장 코드 붙여넣기 (이어하기),Paste save code (continue)
+돌아가기,돌아가기,Back
+게임은 장면마다 자동 저장돼요. 저장 코드를 복사해 두면 다른 기기에서도 이어할 수 있어요.,게임은 장면마다 자동 저장돼요. 저장 코드를 복사해 두면 다른 기기에서도 이어할 수 있어요.,The game auto-saves every scene. Copy a save code to continue on another device.
+게임은 장면마다 자동 저장돼요. 껐다 켜도 하던 장면부터 이어져요. 저장 코드를 복사해 두면 다른 기기나 브라우저에서도 이어서 할 수 있어요.,게임은 장면마다 자동 저장돼요. 껐다 켜도 하던 장면부터 이어져요. 저장 코드를 복사해 두면 다른 기기나 브라우저에서도 이어서 할 수 있어요.,"The game auto-saves every scene, so you pick up right where you were. Copy a save code to continue on another device or browser."
